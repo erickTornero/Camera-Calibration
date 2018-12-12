@@ -5,9 +5,9 @@ DEPS=*.cpp
 NAMEEXEC=application
 
 
-$(NAMEEXEC): houghtransform.cpp
+$(NAMEEXEC): RealTimeNoiseDeletion.cpp
 	echo "Building project ..."
-	$(CPP) -o $@ $^ $(CVFLAGS)
+	$(CPP) -g -o $@ $^ $(CVFLAGS)
 	echo "Successfull building"	
 
 clean:

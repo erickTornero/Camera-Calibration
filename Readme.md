@@ -4,7 +4,7 @@
 
 # Camera Calibration
 
-**Contributors**
+## Contributors
 - [Walter Zuniga](https://github.com/wzuniga)
 
 ## Requirements
