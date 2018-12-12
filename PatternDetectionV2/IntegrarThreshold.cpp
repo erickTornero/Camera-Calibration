@@ -23,7 +23,7 @@ void thresholdIntegral(cv::Mat &inputMat, cv::Mat &outputMat)
 
     int S = MAX(nRows, nCols)/8;
     //double T = 0.15;
-    double T = 0.1;
+    double T = 0.15;
 
     // perform thresholding
     int s2 = S/2;
