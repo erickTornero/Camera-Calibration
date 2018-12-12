@@ -48,9 +48,7 @@ int main(){
             //    grayRowFrame = blurGaussFrame;
             //}
             //cv::threshold(blurGaussFrame, thresholdFrame, 31, 255, CV_THRESH_BINARY);
-            cv::Mat element = getStructuringElement( MORPH_CROSS,
-                                       Size( 3, 3 ),
-                                       Point( 0, 0 ) );
+            cv::Mat element = getStructuringElement( MORPH_CROSS, Size( 3, 3 ), Point( 0, 0 ) );
 
             /// Apply the erosion operation
             cv::erode( blurGaussFrame, erosionFrame, element );
