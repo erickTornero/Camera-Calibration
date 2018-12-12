@@ -23,11 +23,12 @@ int main(){
     cv::VideoCapture video("/home/erick/Documentos/MsCS/Images/videos/padron1.avi");
     // Epsilon to define the distance to center 
     int PatternSIZE = 60;
+    int nPatternCenters = 12;
     double epsilon = 1.0;
     // Epsilon Bounding box comparison with previous bounding box, must be scaled
     double epsilonBB = 100.0;
     // Epsilon for diferences of Sizes:
-    float epsilonSZEl = 50.0;
+    float epsilonSZEl = 60.0;
     int ncicles = 120;
     if(!video.isOpened()){
         printf("Can't open video or webcam\n");
@@ -43,6 +44,10 @@ int main(){
     int Ymax = 1000.0;
     int Xmin = 0.0;
     int Ymin = 0.0;
+    std::vector<cv::Point> CentersPrev;
+    int id1 = -1;
+    int idVector[nPatternCenters+10] = {-1};
+    bool reassign = false;
     while(true){
 
         counter++;
@@ -91,6 +96,8 @@ int main(){
         double szprom = 0.0;
         bool isElipseComputed[contours.size()] = {false};
         std::vector<cv::RotatedRect> minEllipse( contours.size() );
+        std::vector<cv::Point> CenterPoints;
+        
         for(int a = 0; a < points.size(); a++){
             int poschild = points[a];
             if(hierarchy[poschild][2] == -1 ){
@@ -112,6 +119,8 @@ int main(){
                         if((curPoint.x - Xmax < epsilonBB) &&(Xmin - curPoint.x < epsilonBB) && (curPoint.y - Ymax < epsilonBB) && (Ymin - curPoint.y < epsilonBB) ){
                             points2.push_back(poschild);
                             points2.push_back(posfather);
+                            // Save the points in previous mesh.
+                            CenterPoints.push_back(minEllipse[poschild].center);
                             // Compute current Mbb;
                             if(minEllipse[poschild].center.x < xmin){
                                 xmin = minEllipse[poschild].center.x;
@@ -130,6 +139,7 @@ int main(){
                 }
             }
         }
+        
         //ymax = 300;
         //getBoundBox(minEllipse, points2, xmin, ymin, xmax, ymax);
         
@@ -159,6 +169,46 @@ int main(){
             //Xmin = 0.0;
             //Ymin = 0.0;
         }
+        // Identify the numbers or to re- assign values
+        // Center points
+        bool indexesUses[CenterPoints.size()] = {false};
+        if(reassign && CenterPoints.size() == nPatternCenters){
+            //Initialize ID
+            id1 = 0;
+            for(int i = 0; i < nPatternCenters; i++){
+                idVector[i] = i;
+            }
+            reassign = false;
+            
+        }
+        else{
+            for(int k = 0; k < CentersPrev.size(); k++){
+                cv::Point P1 = CentersPrev[idVector[k]];
+                double minDistance = 100.0;
+                int position = 0;
+                for(int i = 0; i < CenterPoints.size(); i++){
+                    double distance = cv::norm(P1 - CenterPoints[i]);
+                    if(distance < minDistance){
+                        position = i;
+                        minDistance = distance;
+                    }
+                }
+                if(!indexesUses[position]){
+                    idVector[k] = position;
+                    indexesUses[position] = true;
+                }
+                else
+                    reassign = true;
+            }
+            
+        }
+        
+        for(int m = 0; m < CenterPoints.size(); m++){
+            cv::putText(rowFrame, std::to_string(m), CenterPoints[idVector[m]], 1, 2, cv::Scalar(255, 0, 0), 2, 8);
+        }
+        //cv::putText(rowFrame, std::to_string(0), CenterPoints[id1], 1.5, 2, cv::Scalar(255, 0, 0), 2, 8, true);
+        // Get the prev Centers.
+        CentersPrev = CenterPoints;
         t2 = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count();
         acumTime += (double)duration;
@@ -170,9 +220,12 @@ int main(){
             //    minEllipse[points2[k]] = cv::fitEllipse( cv::Mat(contours[points2[k]]) );
             
             cv::ellipse( rowFrame, minEllipse[points2[k]], cv::Scalar(0,255,0), 2, 8 );
-            cv::putText(rowFrame, std::to_string(points2[k]), minEllipse[points2[k]].center, 1, 2, cv::Scalar(255, 0, 0));
+            //cv::putText(rowFrame, std::to_string(k), CenterPoints[idVector[k]], 1, 2, cv::Scalar(255, 0, 0));
             // Uncomment bellow to drawBounding boxes
         }
+        //Put just the first ellipse:
+        //cv::putText(rowFrame, std::to_string(points2[0]), minEllipse[points2[0]].center, 1, 2, cv::Scalar(255, 0, 0));
+        // Put text, how many elipses is getted.
         cv::putText(rowFrame, std::to_string(points2.size()), cv::Point(50, 20), 1, 2, cv::Scalar(0, 0, 255));
         
         //cv::hconcat(thresholdFrame, rowFrame, joinImages);
