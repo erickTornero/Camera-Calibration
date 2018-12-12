@@ -19,13 +19,13 @@ void getBoundBox(const std::vector<cv::RotatedRect> & minEllipse, const std::vec
 
 }
 int main(){
-    cv::VideoCapture video("/home/erick/Documentos/MsCS/Images/VideosPrueba/VideosPrueba/PadronAnillos_01.avi");  
-    //cv::VideoCapture video("/home/erick/Documentos/MsCS/Images/videos/padron1.avi");
+    //cv::VideoCapture video("/home/erick/Documentos/MsCS/Images/VideosPrueba/VideosPrueba/PadronAnillos_01.avi");  
+    cv::VideoCapture video("/home/erick/Documentos/MsCS/Images/videos/padron1.avi");
     // Epsilon to define the distance to center 
     int PatternSIZE = 60;
     double epsilon = 1.0;
     // Epsilon Bounding box comparison with previous bounding box, must be scaled
-    double epsilonBB = 200.0;
+    double epsilonBB = 100.0;
     // Epsilon for diferences of Sizes:
     float epsilonSZEl = 50.0;
     int ncicles = 120;
@@ -109,30 +109,30 @@ int main(){
                     if(currsz - szpromEllipse < epsilonSZEl ){
                         //Apply BB Heuristic:
                         cv::Point curPoint = minEllipse[poschild].center;
-                        //if(true)(curPoint.x - Xmax < epsilonBB) &&(Xmin - curPoint.x < epsilonBB) && (curPoint.y - Ymax < epsilonBB) && (Ymin - curPoint.y < epsilonBB) ){
+                        if((curPoint.x - Xmax < epsilonBB) &&(Xmin - curPoint.x < epsilonBB) && (curPoint.y - Ymax < epsilonBB) && (Ymin - curPoint.y < epsilonBB) ){
                             points2.push_back(poschild);
                             points2.push_back(posfather);
                             // Compute current Mbb;
                             if(minEllipse[poschild].center.x < xmin){
                                 xmin = minEllipse[poschild].center.x;
                             }
-                            else if(minEllipse[poschild].center.x > xmax)
+                            if(minEllipse[poschild].center.x > xmax)
                                 xmax = minEllipse[poschild].center.x;
                             if(minEllipse[poschild].center.y < ymin)
                                 ymin = minEllipse[poschild].center.y;
-                            else if(minEllipse[poschild].center.y > ymax)
+                            if(minEllipse[poschild].center.y > ymax)
                                 ymax = minEllipse[poschild].center.y;
 
                             szprom += (minEllipse[poschild].size.height + minEllipse[poschild].size.height)/2.0;
-                        //}
+                        }
                         
                     }
                 }
             }
         }
-        ymin = 0;
+        //ymax = 300;
         //getBoundBox(minEllipse, points2, xmin, ymin, xmax, ymax);
-        cv::rectangle(rowFrame, cv::Point(xmin, ymin), cv::Point(xmax, ymax), cv::Scalar(0, 0, 255), 4, 8);
+        
         //cv::line(rowFrame, cv::Point(Xmin, Ymin), cv::Point(Xmax, Ymin), cv::Scalar(0, 0, 255), 4, 8);
         //cv::line(rowFrame, cv::Point(Xmax, Ymin), cv::Point(Xmax, Ymax), cv::Scalar(0, 0, 255), 4, 8);
         //cv::line(rowFrame, cv::Point(Xmin, Ymax), cv::Point(Xmax, Ymax), cv::Scalar(0, 0, 255), 4, 8);
@@ -146,6 +146,7 @@ int main(){
             Ymax = ymax;
             Ymin = ymin;
         }
+        cv::rectangle(rowFrame, cv::Point(Xmin, Ymin), cv::Point(Xmax, Ymax), cv::Scalar(0, 0, 255), 4, 8);
         //else{
             
         //}
