@@ -11,10 +11,11 @@ $(NAMEEXEC): houghtransform.cpp
 	echo "Successfull building"	
 
 clean:
-	rm -f application
+	rm application
 .PHONY: clean
 
 all:
+	make clean
 	make $(NAMEEXEC)
 	./$(NAMEEXEC)
 
