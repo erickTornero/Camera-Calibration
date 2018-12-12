@@ -1,0 +1,4 @@
+#ifndef PROCESSIMAGE_H
+#define PROCESSIMAGE_H
+
+#endif // PROCESSIMAGE_H
