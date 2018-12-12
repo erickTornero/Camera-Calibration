@@ -4,6 +4,9 @@
 
 # Camera Calibration
 
+**Contributors**
+- [Walter Zuniga](https://github.com/wzuniga)
+
 ## Requirements
 * c++11
 * Opencv 3.4
