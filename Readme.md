@@ -10,22 +10,23 @@
 ## Requirements
 * c++11
 * Opencv 3.4
-* ffmpeg
+* QT Creator 5.12
 
 ## Follow the instructions to execute Pattern Recognizion
 ### Install
 
 Clone repository:
 
-`git clone https://github.com/erickTornero/Image-Processing`
+`git clone https://github.com/erickTornero/Camera-Calibration.git`
 
 Open Right folder:
 
-`cd Image-Processing/Pattern_Recognizion/`
+`cd Camera-Calibration/Aplication/`
 
-A new location for video is **required**, chage this in *laplacian.cpp* 
-line **13** the argument of *VideoCapture* must be the path to the video,
-if you want to use the default camera, put **0** as argument. 
+
+Open the project in QT, or compile with the following commands:
+
+`qmake Aplication.pro`
 
 Compile Project running the makefile:
 
@@ -34,12 +35,14 @@ Compile Project running the makefile:
 
 ### Execute the program:
 
-`make exec`
+`./Aplication`
+
+### Examples:
+
+Detenction an tracking of pattern:
+
+![alt text](https://raw.githubusercontent.com/erickTornero/Camera-Calibration/master/test1.png)
 
 
-### Extras
-
-If you want to execute the threshold & medianblur filter, just change the filename
-in makefile by **main** 
 
 

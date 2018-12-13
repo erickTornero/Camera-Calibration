@@ -3,7 +3,6 @@
 # include <opencv2/opencv.hpp>
 # include <stdio.h>
 # include <vector>
-# include <stdio.h>
 # include <string.h>
 # include <stdlib.h>
 # include <chrono>
@@ -84,7 +83,7 @@ void thresholdIntegral(cv::Mat &inputMat, cv::Mat &outputMat)
         }
     }
 }
-void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGaussFrame, cv::Mat & thresholdFrame, cv::Mat & integralFrame, int nPatternCenters, double & acumTime){
+void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGaussFrame, cv::Mat & thresholdFrame, cv::Mat & integralFrame, int nPatternCenters, int * idVector, std::vector<cv::Point> & CentersPrev, bool & reassign ,double & acumTime, float & szpromEllipse, int & Xmax, int & Ymax, int & Xmin, int & Ymin){
     auto t1 = std::chrono::high_resolution_clock::now();
     int PatternSIZE = 60;
     double epsilon = 1.0;
@@ -94,18 +93,17 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
     float epsilonSZEl = 60.0;
     int ncicles = 120;
 
-    float szpromEllipse = 1000.0;
+    //float szpromEllipse = 1000.0;
     //Define the bounding box
-    int Xmax = 1000.0;
-    int Ymax = 1000.0;
-    int Xmin = 0.0;
-    int Ymin = 0.0;
+    //int Xmax = 1000.0;
+    //int Ymax = 1000.0;
+    //int Xmin = 0.0;
+    //int Ymin = 0.0;
 
-    std::vector<cv::Point> CentersPrev;
+    //std::vector<cv::Point> CentersPrev;
 
-    int idVector[nPatternCenters+10];
-    memset(idVector, -1, (nPatternCenters+10)*sizeof (int));
-    bool reassign = false;
+
+    //bool reassign = false;
 
     cv::cvtColor(rowFrame, grayRowFrame, CV_RGB2GRAY);
     GaussianBlur( grayRowFrame, blurGaussFrame, cv::Size( 5, 5 ), 0, 0 );
@@ -222,6 +220,7 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
                 reassign = true;
         }
     }
+    CentersPrev = CenterPoints;
     auto t2 = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count();
     acumTime += (double)duration;
@@ -232,13 +231,13 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
                 //    minEllipse[points2[k]] = cv::fitEllipse( cv::Mat(contours[points2[k]]) );
 
                 cv::ellipse( rowFrame, minEllipse[points2[k]], cv::Scalar(0,255,0), 2, 8 );
-                //cv::putText(rowFrame, std::to_string(k), CenterPoints[idVector[k]], 1, 2, cv::Scalar(255, 0, 0));
+                cv::putText(rowFrame, std::to_string(k), CenterPoints[idVector[k]], 1, 2, cv::Scalar(255, 0, 0));
                 // Uncomment bellow to drawBounding boxes
      }
     for(int m = 0; m < CenterPoints.size(); m++){
            cv::putText(rowFrame, std::to_string(m), CenterPoints[idVector[m]], 1, 2, cv::Scalar(255, 0, 0), 2, 8);
     }
-    cv::putText(rowFrame, std::to_string(points2.size()), cv::Point(50, 20), 1, 2, cv::Scalar(0, 0, 255));
+    cv::putText(rowFrame, std::to_string(points2.size()), cv::Point(50, 20), 1, 2, cv::Scalar(0, 0, 255), 2, 8);
 }
 
 #endif // PROCESSIMAGE_H

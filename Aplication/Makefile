@@ -213,6 +213,7 @@ DIST          = /home/erick/anaconda3/mkspecs/features/spec_pre.prf \
 		/home/erick/anaconda3/mkspecs/features/qt_config.prf \
 		/home/erick/anaconda3/mkspecs/linux-g++/qmake.conf \
 		/home/erick/anaconda3/mkspecs/features/spec_post.prf \
+		.qmake.stash \
 		/home/erick/anaconda3/mkspecs/features/exclusive_builds.prf \
 		/home/erick/anaconda3/mkspecs/features/toolchain.prf \
 		/home/erick/anaconda3/mkspecs/features/default_pre.prf \
@@ -233,7 +234,6 @@ DIST          = /home/erick/anaconda3/mkspecs/features/spec_pre.prf \
 		/home/erick/anaconda3/mkspecs/features/yacc.prf \
 		/home/erick/anaconda3/mkspecs/features/lex.prf \
 		Aplication.pro mainwindow.h \
-		IntegrarThreshold.hpp \
 		processimage.h main.cpp \
 		mainwindow.cpp
 QMAKE_TARGET  = Aplication
@@ -405,6 +405,7 @@ Makefile: Aplication.pro /home/erick/anaconda3/mkspecs/linux-g++/qmake.conf /hom
 		/home/erick/anaconda3/mkspecs/features/qt_config.prf \
 		/home/erick/anaconda3/mkspecs/linux-g++/qmake.conf \
 		/home/erick/anaconda3/mkspecs/features/spec_post.prf \
+		.qmake.stash \
 		/home/erick/anaconda3/mkspecs/features/exclusive_builds.prf \
 		/home/erick/anaconda3/mkspecs/features/toolchain.prf \
 		/home/erick/anaconda3/mkspecs/features/default_pre.prf \
@@ -587,6 +588,7 @@ Makefile: Aplication.pro /home/erick/anaconda3/mkspecs/linux-g++/qmake.conf /hom
 /home/erick/anaconda3/mkspecs/features/qt_config.prf:
 /home/erick/anaconda3/mkspecs/linux-g++/qmake.conf:
 /home/erick/anaconda3/mkspecs/features/spec_post.prf:
+.qmake.stash:
 /home/erick/anaconda3/mkspecs/features/exclusive_builds.prf:
 /home/erick/anaconda3/mkspecs/features/toolchain.prf:
 /home/erick/anaconda3/mkspecs/features/default_pre.prf:
@@ -625,7 +627,7 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents /home/erick/anaconda3/mkspecs/features/data/dummy.cpp $(DISTDIR)/
-	$(COPY_FILE) --parents mainwindow.h IntegrarThreshold.hpp processimage.h $(DISTDIR)/
+	$(COPY_FILE) --parents mainwindow.h processimage.h $(DISTDIR)/
 	$(COPY_FILE) --parents main.cpp mainwindow.cpp $(DISTDIR)/
 	$(COPY_FILE) --parents mainwindow.ui $(DISTDIR)/
 
@@ -781,8 +783,6 @@ moc_mainwindow.cpp: /home/erick/anaconda3/include/qt/QtWidgets/QMainWindow \
 		/home/erick/anaconda3/include/qt/QtWidgets/qfiledialog.h \
 		/home/erick/anaconda3/include/qt/QtCore/qdir.h \
 		/home/erick/anaconda3/include/qt/QtCore/qfileinfo.h \
-		processimage.h \
-		IntegrarThreshold.hpp \
 		mainwindow.h \
 		moc_predefs.h \
 		/home/erick/anaconda3/bin/moc
@@ -927,8 +927,6 @@ main.o: main.cpp mainwindow.h \
 		/home/erick/anaconda3/include/qt/QtWidgets/qfiledialog.h \
 		/home/erick/anaconda3/include/qt/QtCore/qdir.h \
 		/home/erick/anaconda3/include/qt/QtCore/qfileinfo.h \
-		processimage.h \
-		IntegrarThreshold.hpp \
 		/home/erick/anaconda3/include/qt/QtWidgets/QApplication \
 		/home/erick/anaconda3/include/qt/QtWidgets/qapplication.h \
 		/home/erick/anaconda3/include/qt/QtCore/qcoreapplication.h \
@@ -1058,9 +1056,9 @@ mainwindow.o: mainwindow.cpp mainwindow.h \
 		/home/erick/anaconda3/include/qt/QtWidgets/qfiledialog.h \
 		/home/erick/anaconda3/include/qt/QtCore/qdir.h \
 		/home/erick/anaconda3/include/qt/QtCore/qfileinfo.h \
+		ui_mainwindow.h \
 		processimage.h \
-		IntegrarThreshold.hpp \
-		ui_mainwindow.h
+		/home/erick/anaconda3/include/qt/QtCore/QString
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o mainwindow.o mainwindow.cpp
 
 moc_mainwindow.o: moc_mainwindow.cpp 

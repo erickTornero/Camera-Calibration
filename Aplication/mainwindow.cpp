@@ -1,6 +1,8 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "processimage.h"
+#include <string>
+#include <QString>
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -52,15 +54,28 @@ void MainWindow::OpenCamera(){
     bool keep = true;
     double acumm = 0.0;
     unsigned long counter = 0;
+    int nPatternCenters = 12;
+    int idVector[nPatternCenters+20];
+    std::vector<cv::Point> CentersPrev;
+    float szpromEllipse = 1000.0;
+    //Define the bounding box
+    int Xmax = 1000.0;
+    int Ymax = 1000.0;
+    int Xmin = 0.0;
+    int Ymin = 0.0;
+    bool reassign = false;
+    memset(idVector, -1, (nPatternCenters+20)*sizeof (int));
     while (keep) {
         video>>frame;
         if(!frame.empty()){
             counter++;
             if(counter % 120 == 0){
                 double time = acumm/120.0;
+                ui->labelTime->setText(QString::fromUtf8(std::to_string(time).c_str()));
+                acumm = 0.0;
             }
             cv::Mat rowFrame, grayRowFrame, blurGaussFrame, thresholdFrame, integralFrame;
-            ProccessImage(frame, grayRowFrame, blurGaussFrame, thresholdFrame, integralFrame, 30, acumm);
+            ProccessImage(frame, grayRowFrame, blurGaussFrame, thresholdFrame, integralFrame, nPatternCenters, idVector, CentersPrev, reassign, acumm, szpromEllipse, Xmax, Ymax, Xmin, Ymin);
             QImage qimg(frame.data, frame.cols, frame.rows, frame.step, QImage::Format_RGB888);
             QImage qimgG(blurGaussFrame.data, blurGaussFrame.cols, blurGaussFrame.rows, blurGaussFrame.step, QImage::Format_Grayscale8);
             QImage qimgT(thresholdFrame.data, thresholdFrame.cols, thresholdFrame.rows, thresholdFrame.step, QImage::Format_Grayscale8);
