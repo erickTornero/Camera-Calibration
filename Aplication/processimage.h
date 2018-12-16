@@ -231,7 +231,7 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
                 //    minEllipse[points2[k]] = cv::fitEllipse( cv::Mat(contours[points2[k]]) );
 
                 cv::ellipse( rowFrame, minEllipse[points2[k]], cv::Scalar(0,255,0), 2, 8 );
-                cv::putText(rowFrame, std::to_string(k), CenterPoints[idVector[k]], 1, 2, cv::Scalar(255, 0, 0));
+                //cv::putText(rowFrame, std::to_string(k), CenterPoints[idVector[k]], 1, 2, cv::Scalar(255, 0, 0));
                 // Uncomment bellow to drawBounding boxes
      }
     for(int m = 0; m < CenterPoints.size(); m++){
