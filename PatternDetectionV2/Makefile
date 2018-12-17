@@ -5,7 +5,7 @@ DEPS=*.cpp
 NAMEEXEC=application
 
 
-$(NAMEEXEC): RealTimeNoiseDeletion.cpp
+$(NAMEEXEC): RealTimeNoiseDeletion_2.cpp
 	echo "Building project ..."
 	$(CPP) -g -o $@ $^ $(CVFLAGS)
 	echo "Successfull building"	

@@ -23,7 +23,7 @@ void getBoundBox(const std::vector<cv::RotatedRect> & minEllipse, const std::vec
 }
 int main(){
     //cv::VideoCapture video("/home/erick/Documentos/MsCS/Images/VideosPrueba/VideosPrueba/PadronAnillos_01.avi");  
-    cv::VideoCapture video("../../files/padron1.avi");
+    cv::VideoCapture video("/home/erick/Documentos/MsCS/Images/videos/padron1.avi");
     // Epsilon to define the distance to center 
     int PatternSIZE = 60;
     int nPatternCenters = 30;

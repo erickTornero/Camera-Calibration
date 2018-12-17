@@ -26,9 +26,9 @@ int main(){
     int nPatternCenters = 12;
     double epsilon = 1.0;
     // Epsilon Bounding box comparison with previous bounding box, must be scaled
-    double epsilonBB = 100.0;
+    double epsilonBB = 70;
     // Epsilon for diferences of Sizes:
-    float epsilonSZEl = 60.0;
+    float epsilonSZEl = 120.0;
     int ncicles = 120;
     if(!video.isOpened()){
         printf("Can't open video or webcam\n");
@@ -48,9 +48,12 @@ int main(){
     int id1 = -1;
     int idVector[nPatternCenters+10] = {-1};
     bool reassign = false;
+    int nframes = 0;
+    int nerrors = 0;
     while(true){
 
         counter++;
+	nframes++;
         if(counter % ncicles == 0){
             std::cout<<acumTime/(double)ncicles<<std::endl;
             acumTime = 0.0;
@@ -206,6 +209,10 @@ int main(){
         for(int m = 0; m < CenterPoints.size(); m++){
             cv::putText(rowFrame, std::to_string(m), CenterPoints[idVector[m]], 1, 2, cv::Scalar(255, 0, 0), 2, 8);
         }
+	if(CenterPoints.size() != nPatternCenters)
+	    nerrors++;
+	float accurcy = (float)(nframes-nerrors)*100.0/(float)nframes;
+	cv::putText(rowFrame, std::to_string(accurcy), cv::Point(50, 60), 2, 2, cv::Scalar(0, 0, 255));
         //cv::putText(rowFrame, std::to_string(0), CenterPoints[id1], 1.5, 2, cv::Scalar(255, 0, 0), 2, 8, true);
         // Get the prev Centers.
         CentersPrev = CenterPoints;

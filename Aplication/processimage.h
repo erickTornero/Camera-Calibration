@@ -86,11 +86,11 @@ void thresholdIntegral(cv::Mat &inputMat, cv::Mat &outputMat)
 void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGaussFrame, cv::Mat & thresholdFrame, cv::Mat & integralFrame, int nPatternCenters, int * idVector, std::vector<cv::Point> & CentersPrev, bool & reassign ,double & acumTime, float & szpromEllipse, int & Xmax, int & Ymax, int & Xmin, int & Ymin){
     auto t1 = std::chrono::high_resolution_clock::now();
     int PatternSIZE = 60;
-    double epsilon = 1.0;
+    double epsilon = 2.0;
     // Epsilon Bounding box comparison with previous bounding box, must be scaled
-    double epsilonBB = 100.0;
+    double epsilonBB = 85.0;
     // Epsilon for diferences of Sizes:
-    float epsilonSZEl = 60.0;
+    float epsilonSZEl = 80.0;
     int ncicles = 120;
 
     //float szpromEllipse = 1000.0;
@@ -147,6 +147,7 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
             double val = cv::norm(minEllipse[poschild].center - minEllipse[posfather].center);
             if(val < epsilon){
                 double currsz = (minEllipse[posfather].size.height + minEllipse[posfather].size.height)/2.0;
+                //double curMinSZ = (minEllipse[posfather].size.height + minEllipse[posfather].size.height)/2.0;
                 if(currsz - szpromEllipse < epsilonSZEl ){
                     //Apply BB Heuristic:
                     cv::Point curPoint = minEllipse[poschild].center;

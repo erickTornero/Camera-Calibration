@@ -19,12 +19,12 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->graphicsViewPat->scene()->addItem(&pixmapPat);
 }
 void MainWindow::closeEvent(QCloseEvent * event){
-    if(video.isOpened()){
+    /*if(video.isOpened()){
         QMessageBox::warning(this, "warning","Stop the video before closing the app");
         event->ignore();
     }
     else
-        event->accept();
+        event->accept();*/
 }
 MainWindow::~MainWindow()
 {
@@ -53,7 +53,8 @@ void MainWindow::OpenCamera(){
     cv::Mat frame;
     bool keep = true;
     double acumm = 0.0;
-    unsigned long counter = 0;
+    unsigned long nframes = 0;
+    unsigned long nfails = 0;
     int nPatternCenters = 12;
     int idVector[nPatternCenters+20];
     std::vector<cv::Point> CentersPrev;
@@ -68,8 +69,8 @@ void MainWindow::OpenCamera(){
     while (keep) {
         video>>frame;
         if(!frame.empty()){
-            counter++;
-            if(counter % 120 == 0){
+            nframes++;
+            if(nframes % 120 == 0){
                 double time = acumm/120.0;
                 ui->labelTime->setText(QString::fromUtf8(std::to_string(time).c_str()));
                 acumm = 0.0;
@@ -89,7 +90,10 @@ void MainWindow::OpenCamera(){
             ui->graphicsViewGauss->fitInView(&pixmapGauss, Qt::KeepAspectRatio);
             ui->graphicsViewThres->fitInView(&pixmapThres, Qt::KeepAspectRatio);
             ui->graphicsViewPat->fitInView(&pixmapPat, Qt::KeepAspectRatio);
-
+            if(CentersPrev.size() != nPatternCenters)
+                nfails++;
+            float accurc = (float)(nframes - nfails)*100.0/(float)nframes;
+            ui->labelAccuracy->setText(QString::fromUtf8(std::to_string(accurc).c_str()));
             //ui->graphicsView->scene()->addItem(&pixmap);
             cv::waitKey(0);
         }
