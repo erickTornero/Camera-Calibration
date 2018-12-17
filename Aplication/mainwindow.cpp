@@ -34,9 +34,19 @@ void MainWindow::executeTask(){
 
 }
 void MainWindow::OpenCamera(){
-    bool isCamera;
+    bool isCamera = false;
+    bool ok;
+    int nPatternCenters = 12;
+    int ncenters = ui->textnCenters->toPlainText().toInt(&ok);
+    if(ok)
+        nPatternCenters = ncenters;
+    else{
+        ui->plainTextEditLog->appendPlainText("Insert a integer number of Centers\n");
+        return;
+    }
     QString filename = QFileDialog::getOpenFileName(this, tr("choose"), "", tr("Images (*.avi)"));
-    int cameraIndex = ui->videoEdit->text().toInt(&isCamera);
+    int cameraIndex = 0; //ui->videoEdit->text().toInt(&isCamera);
+
     if(isCamera){
         if(!video.open(cameraIndex)){
             QMessageBox::critical(this, "Camera error", "Make Sure you entered a correct Camera index");
@@ -55,7 +65,7 @@ void MainWindow::OpenCamera(){
     double acumm = 0.0;
     unsigned long nframes = 0;
     unsigned long nfails = 0;
-    int nPatternCenters = 20;
+
     int idVector[nPatternCenters+20];
     std::vector<cv::Point> CentersPrev;
     float szpromEllipse = 1000.0;
@@ -101,6 +111,8 @@ void MainWindow::OpenCamera(){
             keep = false;
         }
     }
+    ui->plainTextEditLog->appendPlainText("Finished Successfully!");
+
 }
 
 void MainWindow::on_pushButton_clicked()
