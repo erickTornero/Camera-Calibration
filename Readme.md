@@ -41,7 +41,7 @@ Compile Project running the makefile:
 
 Detenction an tracking of pattern with 12 Centers:
 
-![alt text](https://raw.githubusercontent.com/erickTornero/Camera-Calibration/master/test1.png)
+![alt text](https://raw.githubusercontent.com/erickTornero/Camera-Calibration/master/tt2.png)
 
 Detenction an tracking of pattern with 20 Centers:
 
