@@ -55,7 +55,7 @@ void MainWindow::OpenCamera(){
     double acumm = 0.0;
     unsigned long nframes = 0;
     unsigned long nfails = 0;
-    int nPatternCenters = 12;
+    int nPatternCenters = 20;
     int idVector[nPatternCenters+20];
     std::vector<cv::Point> CentersPrev;
     float szpromEllipse = 1000.0;

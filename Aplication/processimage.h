@@ -31,7 +31,7 @@ void thresholdIntegral(cv::Mat &inputMat, cv::Mat &outputMat)
     CV_Assert(sumMat.depth() == CV_32S);
     CV_Assert(sizeof(int) == 4);
 
-    int S = MAX(nRows, nCols)/8;
+    int S = MAX(nRows, nCols)/16;
     //double T = 0.15;
     double T = 0.1;
 
@@ -88,9 +88,9 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
     int PatternSIZE = 60;
     double epsilon = 2.0;
     // Epsilon Bounding box comparison with previous bounding box, must be scaled
-    double epsilonBB = 85.0;
+    double epsilonBB = 60.0; //Second Pattern: 80, First pattern: 85
     // Epsilon for diferences of Sizes:
-    float epsilonSZEl = 80.0;
+    float epsilonSZEl = 95.0; //Second Pattern: 95Fist Pattern: 80
     int ncicles = 120;
 
     //float szpromEllipse = 1000.0;
@@ -147,29 +147,31 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
             double val = cv::norm(minEllipse[poschild].center - minEllipse[posfather].center);
             if(val < epsilon){
                 double currsz = (minEllipse[posfather].size.height + minEllipse[posfather].size.height)/2.0;
-                //double curMinSZ = (minEllipse[posfather].size.height + minEllipse[posfather].size.height)/2.0;
-                if(currsz - szpromEllipse < epsilonSZEl ){
-                    //Apply BB Heuristic:
-                    cv::Point curPoint = minEllipse[poschild].center;
-                    if((curPoint.x - Xmax < epsilonBB) &&(Xmin - curPoint.x < epsilonBB) && (curPoint.y - Ymax < epsilonBB) && (Ymin - curPoint.y < epsilonBB) ){
-                        points2.push_back(poschild);
-                        points2.push_back(posfather);
-                        // Save the points in previous mesh.
-                        CenterPoints.push_back(minEllipse[poschild].center);
-                        // Compute current Mbb;
-                        if(minEllipse[poschild].center.x < xmin){
-                            xmin = minEllipse[poschild].center.x;
+                double curMinSZ = (minEllipse[poschild].size.height + minEllipse[poschild].size.height)/2.0;
+                if(currsz/curMinSZ < 2.9){
+                    if(currsz - szpromEllipse < epsilonSZEl ){
+                        //Apply BB Heuristic:
+                        cv::Point curPoint = minEllipse[poschild].center;
+                        if((curPoint.x - Xmax < epsilonBB) &&(Xmin - curPoint.x < epsilonBB) && (curPoint.y - Ymax < epsilonBB) && (Ymin - curPoint.y < epsilonBB) ){
+                            points2.push_back(poschild);
+                            points2.push_back(posfather);
+                            // Save the points in previous mesh.
+                            CenterPoints.push_back(minEllipse[poschild].center);
+                            // Compute current Mbb;
+                            if(minEllipse[poschild].center.x < xmin){
+                                xmin = minEllipse[poschild].center.x;
+                            }
+                            if(minEllipse[poschild].center.x > xmax)
+                                xmax = minEllipse[poschild].center.x;
+                            if(minEllipse[poschild].center.y < ymin)
+                                ymin = minEllipse[poschild].center.y;
+                            if(minEllipse[poschild].center.y > ymax)
+                                ymax = minEllipse[poschild].center.y;
+
+                            szprom += (minEllipse[poschild].size.height + minEllipse[poschild].size.height)/2.0;
                         }
-                        if(minEllipse[poschild].center.x > xmax)
-                            xmax = minEllipse[poschild].center.x;
-                        if(minEllipse[poschild].center.y < ymin)
-                            ymin = minEllipse[poschild].center.y;
-                        if(minEllipse[poschild].center.y > ymax)
-                            ymax = minEllipse[poschild].center.y;
 
-                        szprom += (minEllipse[poschild].size.height + minEllipse[poschild].size.height)/2.0;
                     }
-
                 }
             }
         }

@@ -39,10 +39,10 @@ Compile Project running the makefile:
 
 ### Examples:
 
-Detenction an tracking of pattern:
+Detenction an tracking of pattern with 12 Centers:
 
 ![alt text](https://raw.githubusercontent.com/erickTornero/Camera-Calibration/master/test1.png)
 
+Detenction an tracking of pattern with 20 Centers:
 
-
-
+![alt text](https://raw.githubusercontent.com/erickTornero/Camera-Calibration/master/sample2.png)
