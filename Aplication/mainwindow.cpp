@@ -80,11 +80,11 @@ void MainWindow::OpenCamera(){
         video>>frame;
         if(!frame.empty()){
             nframes++;
-            if(nframes % 120 == 0){
-                double time = acumm/120.0;
+            //if(nframes % 120 == 0){
+                double time = acumm/nframes;
                 ui->labelTime->setText(QString::fromUtf8(std::to_string(time).c_str()));
-                acumm = 0.0;
-            }
+                //acumm = 0.0;
+            //}
             cv::Mat rowFrame, grayRowFrame, blurGaussFrame, thresholdFrame, integralFrame;
             ProccessImage(frame, grayRowFrame, blurGaussFrame, thresholdFrame, integralFrame, nPatternCenters, idVector, CentersPrev, reassign, acumm, szpromEllipse, Xmax, Ymax, Xmin, Ymin);
             QImage qimg(frame.data, frame.cols, frame.rows, frame.step, QImage::Format_RGB888);
@@ -117,5 +117,6 @@ void MainWindow::OpenCamera(){
 
 void MainWindow::on_pushButton_clicked()
 {
+
     OpenCamera();
 }
