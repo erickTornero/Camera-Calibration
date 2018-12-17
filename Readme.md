@@ -45,4 +45,4 @@ Detenction an tracking of pattern with 12 Centers:
 
 Detenction an tracking of pattern with 20 Centers:
 
-![alt text](https://raw.githubusercontent.com/erickTornero/Camera-Calibration/master/sample2.png)
+![alt text](sample2.png)
