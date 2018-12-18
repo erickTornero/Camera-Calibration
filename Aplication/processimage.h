@@ -90,7 +90,7 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
     // Epsilon Bounding box comparison with previous bounding box, must be scaled
     double epsilonBB = 60.0; //Second Pattern: 80, First pattern: 85
     // Epsilon for diferences of Sizes:
-    float epsilonSZEl = 95.0; //Second Pattern: 95Fist Pattern: 80
+    float epsilonSZEl = 95.0; //Second Pattern, Fist Pattern: 80
     int ncicles = 120;
 
     //float szpromEllipse = 1000.0;
@@ -109,6 +109,7 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
     GaussianBlur( grayRowFrame, blurGaussFrame, cv::Size( 5, 5 ), 0, 0 );
     cv::threshold(blurGaussFrame, thresholdFrame, 100, 255, CV_THRESH_BINARY);
     blurGaussFrame.copyTo(integralFrame);
+    //cv::adaptiveThreshold(blurGaussFrame, integralFrame, 125, cv::ADAPTIVE_THRESH_MEAN_C, CV_THRESH_BINARY, 11, 12);
     thresholdIntegral(blurGaussFrame, integralFrame);
     std::vector<std::vector<cv::Point> > contours;
     std::vector<cv::Vec4i> hierarchy;

@@ -7,11 +7,14 @@
     <x>0</x>
     <y>0</y>
     <width>1356</width>
-    <height>840</height>
+    <height>842</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
+  </property>
+  <property name="autoFillBackground">
+   <bool>true</bool>
   </property>
   <widget class="QWidget" name="centralWidget">
    <widget class="QGraphicsView" name="graphicsView">

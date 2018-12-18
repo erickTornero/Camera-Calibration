@@ -111,6 +111,7 @@ void MainWindow::OpenCamera(){
             keep = false;
         }
     }
+    ui->plainTextEditLog->appendPlainText(QString::fromUtf8(std::to_string(nframes).c_str()));
     ui->plainTextEditLog->appendPlainText("Finished Successfully!");
 
 }
