@@ -170,9 +170,9 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
             double val = cv::norm(minEllipse[poschild].center - minEllipse[posfather].center);
             if(val < epsilon){
                 // Ponderate size of father.
-                double currsz = (minEllipse[posfather].size.height + minEllipse[posfather].size.height)/2.0;
-                double curMinSZ = (minEllipse[poschild].size.height + minEllipse[poschild].size.height)/2.0;
-                // Heuristic: if size of father is too bigger in comparizon to child.
+                double currsz = (minEllipse[posfather].size.height + minEllipse[posfather].size.width)/2.0;
+                double curMinSZ = (minEllipse[poschild].size.height + minEllipse[poschild].size.width)/2.0;
+                // Heuristic: if size of father is too bigger in comparizon to child. 2.9 setted experimentally
                 if(currsz/curMinSZ < 2.9){
                     // Heuristic: If Size of father ellipse increasse dramatically in comparison with previous frame.
                     if(currsz - szpromEllipse < epsilonSZEl ){
@@ -182,7 +182,7 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
                             // Here it is the centerpoint of pattern.
                             points2.push_back(poschild);
                             points2.push_back(posfather);
-                            // Save the points in previous mesh.
+                            // Save the Center point
                             CenterPoints.push_back(minEllipse[poschild].center);
                             // Compute current Mbb;
                             if(minEllipse[poschild].center.x < xmin){
@@ -195,7 +195,7 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
                             if(minEllipse[poschild].center.y > ymax)
                                 ymax = minEllipse[poschild].center.y;
 
-                            szprom += (minEllipse[poschild].size.height + minEllipse[poschild].size.height)/2.0;
+                            szprom += (minEllipse[poschild].size.height + minEllipse[poschild].size.width)/2.0;
                         }
 
                     }
