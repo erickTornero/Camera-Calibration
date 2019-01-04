@@ -105,55 +105,81 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
 
     //bool reassign = false;
 
+    // Convert to Gray Scale
     cv::cvtColor(rowFrame, grayRowFrame, CV_RGB2GRAY);
+    // Apply an Gaussian blur filter
     GaussianBlur( grayRowFrame, blurGaussFrame, cv::Size( 5, 5 ), 0, 0 );
     cv::threshold(blurGaussFrame, thresholdFrame, 100, 255, CV_THRESH_BINARY);
     blurGaussFrame.copyTo(integralFrame);
     //cv::adaptiveThreshold(blurGaussFrame, integralFrame, 125, cv::ADAPTIVE_THRESH_MEAN_C, CV_THRESH_BINARY, 11, 12);
+    // Apply an Integral threshold to the blured image
     thresholdIntegral(blurGaussFrame, integralFrame);
+
+    // Find contours!
     std::vector<std::vector<cv::Point> > contours;
     std::vector<cv::Vec4i> hierarchy;
     cv::findContours(integralFrame, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
-        //first pass, avoid all points with no father and childs
-    std::vector<int> points;
+    // First Heuristic, avoid all contours with no father and childs
+    std::vector<int> points;    // Store the index of possible contours.
+    /*
+     * [{0,1,2,3}]={next contour (same level), previous contour (same level), child contour, parent contour}
+     */
     for(int a = 0; a < contours.size(); a++){
         if((hierarchy[a][2] >= 0 || hierarchy[a][3] >= 0) && contours[a].size() > 5)
             points.push_back(a);
     }
 
+    // To store index of contours after apply the heuristics
     std::vector<int> points2;
-    //Get the MBB:
+    // Initialize the MBB
+    // Crazy values, will be change in first execution
     int xmin = 3000;
     int ymin = 3000;
     int xmax = 0;
     int ymax = 0;
+    // For heuristic of weighted size of elipse.
     double szprom = 0.0;
+
+    // To avoid to compute more than once the 'fitEllipseMethod'
     bool isElipseComputed[contours.size()];
     memset(isElipseComputed, false, contours.size()*sizeof (bool));
+
+    // The ellipse of Each contour, not necessariment will be calculated all ellipses.
     std::vector<cv::RotatedRect> minEllipse( contours.size() );
+
+    // To Store the Center of each Pattern
     std::vector<cv::Point> CenterPoints;
 
+    // Iterate over all possible contours.
     for(int a = 0; a < points.size(); a++){
         int poschild = points[a];
+        // [2] == -1 ? means that contour doesn't have child
         if(hierarchy[poschild][2] == -1 ){
+            // Compute child Ellipse if it is not computed yet.
             if(!isElipseComputed[poschild] && contours[poschild].size() > 5){
                 minEllipse[poschild] = cv::fitEllipse(cv::Mat(contours[poschild]));
                 isElipseComputed[poschild] = true;
             }
+            // compute father Ellipse if it is not computed yet.
             int posfather = hierarchy[points[a]][3];
             if(!isElipseComputed[posfather] && contours[posfather].size() > 5){
                 minEllipse[posfather] = cv::fitEllipse(cv::Mat(contours[posfather]));
                 isElipseComputed[posfather] = true;
             }
+            // Heuristic: Is the center of child, near to center of father?
             double val = cv::norm(minEllipse[poschild].center - minEllipse[posfather].center);
             if(val < epsilon){
+                // Ponderate size of father.
                 double currsz = (minEllipse[posfather].size.height + minEllipse[posfather].size.height)/2.0;
                 double curMinSZ = (minEllipse[poschild].size.height + minEllipse[poschild].size.height)/2.0;
+                // Heuristic: if size of father is too bigger in comparizon to child.
                 if(currsz/curMinSZ < 2.9){
+                    // Heuristic: If Size of father ellipse increasse dramatically in comparison with previous frame.
                     if(currsz - szpromEllipse < epsilonSZEl ){
-                        //Apply BB Heuristic:
+                        //Heuristic: M. Bounding Box Heuristic:
                         cv::Point curPoint = minEllipse[poschild].center;
                         if((curPoint.x - Xmax < epsilonBB) &&(Xmin - curPoint.x < epsilonBB) && (curPoint.y - Ymax < epsilonBB) && (Ymin - curPoint.y < epsilonBB) ){
+                            // Here it is the centerpoint of pattern.
                             points2.push_back(poschild);
                             points2.push_back(posfather);
                             // Save the points in previous mesh.
