@@ -87,10 +87,23 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
     auto t1 = std::chrono::high_resolution_clock::now();
     int PatternSIZE = 60;
     double epsilon = 2.0;
+
+    //    epsilon = 4.0;
     // Epsilon Bounding box comparison with previous bounding box, must be scaled
     double epsilonBB = 60.0; //Second Pattern: 80, First pattern: 85
     // Epsilon for diferences of Sizes:
-    float epsilonSZEl = 95.0; //Second Pattern, Fist Pattern: 80
+    float epsilonSZEl = 95.0; //Second Pattern, Fist Pattern: 80, 95 /obs 55 or 95 of this parameter not provide difference
+    if (szpromEllipse > 17){
+        epsilon = 3.0;
+        epsilonBB = 45;
+    }
+    else if (szpromEllipse < 9) {
+        epsilonBB = 20;
+    }
+    else{
+        epsilon = 2.0;
+        epsilonBB = 45;
+    }
     int ncicles = 120;
 
     //float szpromEllipse = 1000.0;
@@ -99,7 +112,7 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
     //int Ymax = 1000.0;
     //int Xmin = 0.0;
     //int Ymin = 0.0;
-
+    std::cout<<szpromEllipse<<std::endl;
     //std::vector<cv::Point> CentersPrev;
 
 
@@ -184,7 +197,7 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
                             points2.push_back(posfather);
                             // Save the Center point
                             CenterPoints.push_back(minEllipse[poschild].center);
-                            // Compute current Mbb;
+                            // Compute the MBB of Current Frame;
                             if(minEllipse[poschild].center.x < xmin){
                                 xmin = minEllipse[poschild].center.x;
                             }
@@ -195,7 +208,9 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
                             if(minEllipse[poschild].center.y > ymax)
                                 ymax = minEllipse[poschild].center.y;
 
-                            szprom += (minEllipse[poschild].size.height + minEllipse[poschild].size.width)/2.0;
+                            // Acumm Size of ellipse prom
+                            //szprom += (minEllipse[poschild].size.height + minEllipse[poschild].size.width)/2.0;
+                            szprom += currsz;
                         }
 
                     }
