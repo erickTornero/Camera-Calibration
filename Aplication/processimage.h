@@ -389,7 +389,8 @@ bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatte
         }
         position[3] = temp;
         ComputeCoefficients(CenterPoints, widthBound, heightBound, position, coefX, coefY);
-        ComputeIndexes(idVector, CenterPoints, nPatternCenters, coefX, coefY, grid);
+        if(!ComputeIndexes(idVector, CenterPoints, nPatternCenters, coefX, coefY, grid))
+            return false;
     }
     /*bool indexesUsed[nPatternCenters];
     memset(indexesUsed, false, nPatternCenters*sizeof (bool));
@@ -646,10 +647,13 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
                 //cv::putText(rowFrame, std::to_string(k), CenterPoints[idVector[k]], 1, 2, cv::Scalar(255, 0, 0));
                 // Uncomment bellow to drawBounding boxes
      }
-    for(int nnr = 0; nnr < grid.height; nnr++){
-        int wherep= nnr*grid.width;
-        cv::line(rowFrame, CenterPoints[idVector[wherep]], CenterPoints[idVector[wherep + grid.width - 1]], cv::Scalar(120, 10, 10), 2, 8 );
+    if(CenterPoints.size() == nPatternCenters){
+        for(int nnr = 0; nnr < grid.height; nnr++){
+            int wherep= nnr*grid.width;
+            cv::line(rowFrame, CenterPoints[idVector[wherep]], CenterPoints[idVector[wherep + grid.width - 1]], cv::Scalar(120, 10, 10), 2, 8 );
+        }
     }
+
     for(int m = 0; m < CenterPoints.size(); m++){
            cv::putText(rowFrame, std::to_string(m), CenterPoints[idVector[m]], 1, 2, cv::Scalar(255, 0, 0), 2, 8);
     }
