@@ -243,6 +243,7 @@ bool ComputeCoefficients(const std::vector<cv::Point> & CenterPoints, int widthB
     int Y2[4] = {0, 0, heightBound, heightBound};
     //auto t1 = std::chrono::high_resolution_clock::now();
     ComputeBilinearCoeff(X1, Y1, X2, Y2, coefX, coefY, 4);
+    return true;
 }
 
 /*
@@ -282,9 +283,9 @@ bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatte
     cv::Point2f rec_points[4];
     rect.points(rec_points);
 
-    for(size_t j = 0; j < 4; j++){
+    /*for(size_t j = 0; j < 4; j++){
         cv::line(im, rec_points[j], rec_points[(j+1)%4], cv::Scalar(255,0,0), 4, 8);
-    }
+    }*/
     int position[4] = {-1, -1, -1, -1};
     //float eps = 20.0;
     //int maxnComponents = 20;
@@ -321,9 +322,9 @@ bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatte
             // Compute the Diagonal Rect.
             float pend = (float)(CenterPoints[position[idx2]].y - CenterPoints[position[idx1]].y)/(float)(CenterPoints[position[idx2]].x - CenterPoints[position[idx1]].x);
             float c = (float)(CenterPoints[position[idx2]].y - pend*CenterPoints[position[idx2]].x);
-            cv::line(im, CenterPoints[position[idx2]], CenterPoints[position[idx1]], cv::Scalar(255,0,255), 4, 8);
+            //cv::line(im, CenterPoints[position[idx2]], CenterPoints[position[idx1]], cv::Scalar(255,0,255), 4, 8);
 
-            std::cout<<"y = "<<pend<<" x + " <<c<<std::endl;
+            //std::cout<<"y = "<<pend<<" x + " <<c<<std::endl;
             // Get the Center of maximal distance to this Rect.
             float maxd = 0.0;
             for(int m = 0; m < CenterPoints.size(); m++){
@@ -334,11 +335,11 @@ bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatte
                     maxd = di;
                 }
             }
-            float pend2 = -1/pend;
-            cv::Point Pm = CenterPoints[position[k]];
-            float c2 = Pm.y - pend2*Pm.x;
-            cv::Point intersection = cv::Point((c - c2)/(pend2 - pend), pend*(c - c2)/(pend2-pend) + c);
-            cv::line(im, Pm, intersection, cv::Scalar(255,255,0), 4, 8);
+            //float pend2 = -1/pend;
+            //cv::Point Pm = CenterPoints[position[k]];
+            //float c2 = Pm.y - pend2*Pm.x;
+            //cv::Point intersection = cv::Point((c - c2)/(pend2 - pend), pend*(c - c2)/(pend2-pend) + c);
+            //cv::line(im, Pm, intersection, cv::Scalar(255,255,0), 4, 8);
 
             // If the other corner is not defined or if it is equals to the previous corner then compute the minimal distance
             // Current this is the maximal distance but with negative signal, so this is the minimal distance
@@ -361,11 +362,11 @@ bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatte
     SortIndexes(CenterPoints, position, 4);
 
 
-    for(int k = 0; k < 4; k++){
+    /*for(int k = 0; k < 4; k++){
         std::string pname = "P";
         pname.append(std::to_string(k+1));
         cv::putText(im, pname, CenterPoints[position[k]], 1, 2, cv::Scalar(255, 255, 0), 2, 8);
-    }
+    }*/
 
     int widthBound, heightBound;
     widthBound = (grid.width-1)*20;
@@ -408,24 +409,11 @@ bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatte
     }*/
     delete [] coefX;
     delete [] coefY;
-    cv::Point centerRect = rect.center;
-    /*for(int k = 0; k < 4; k++){
-        double maxCenterDistance = 0.0;
-        for(int i = 0; i < indexPossible[k].size(); i++){
-            int idx = indexPossible[k].top();
-            double distCenter = cv::norm(centerRect - CenterPoints[idx]) ;
-            cv::circle(im, CenterPoints[idx], 5, cv::Scalar(80*k, 0, 80*k), 4, 8);
-            if(distCenter > maxCenterDistance){
-                maxCenterDistance = distCenter;
-                //position[k] = idx;
-            }
-            indexPossible[k].pop();
-        }
-    }*/
+    //cv::Point centerRect = rect.center;
 
-    for(size_t j = 0; j < 4; j++){
+    /*for(size_t j = 0; j < 4; j++){
         cv::line(im, CenterPoints[position[j]], CenterPoints[position[(j+1)%4]], cv::Scalar(0,0,255), 4, 8);
-    }
+    }*/
     return true;
 
 }
@@ -466,6 +454,8 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
         grid.set(4, 3);
     }
 
+    // If Pattern is well detected then allow to Draw
+    bool allowDraw = false;
     //float szpromEllipse = 1000.0;
     //Define the bounding box
     //int Xmax = 1000.0;
@@ -600,20 +590,18 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
 
     if(reassign && CenterPoints.size() == nPatternCenters){
         //Initialize ID
-        for(int i = 0; i < nPatternCenters; i++){
-            //idVector[i] = i;
-        }
-
         if(ReassingIdx(idVector, CenterPoints, nPatternCenters, rowFrame, eps, grid)){
-            std::string s= "Exim";
-            s.append(std::to_string(ccc));
-            s.append(".png");
-            ccc++;
-            cv::imwrite(s, rowFrame);
+            //std::string s= "Exim";
+            //s.append(std::to_string(ccc));
+            //s.append(".png");
+            //ccc++;
+            //cv::imwrite(s, rowFrame);
+            allowDraw = true;
             reassign = false;
         }
     }
     else{
+        // Perform the Tracking
         for(int k = 0; k < CentersPrev.size(); k++){
             cv::Point P1 = CentersPrev[idVector[k]];
             double minDistance = 100.0;
@@ -632,32 +620,41 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
             else
                 reassign = true;
         }
+        // Allow to draw if there's not problem in Tracking!
+        if(!reassign)
+            allowDraw = true;
     }
     CentersPrev = CenterPoints;
     auto t2 = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count();
     acumTime += (double)duration;
     //cv::rectangle(rowFrame, cv::Point(Xmin, Ymin), cv::Point(Xmax, Ymax), cv::Scalar(0, 0, 255), 4, 8);
-    for(int k = 0; k < points2.size(); k++){
-                //boundRect[points2[k]] = cv::minAreaRect(cv::Mat(contours[points2[k]]));
-                //if( contours[points2[k]].size() > 5 )
-                //    minEllipse[points2[k]] = cv::fitEllipse( cv::Mat(contours[points2[k]]) );
 
-                cv::ellipse( rowFrame, minEllipse[points2[k]], cv::Scalar(0,255,0), 2, 8 );
-                //cv::putText(rowFrame, std::to_string(k), CenterPoints[idVector[k]], 1, 2, cv::Scalar(255, 0, 0));
-                // Uncomment bellow to drawBounding boxes
-     }
-    if(CenterPoints.size() == nPatternCenters){
-        for(int nnr = 0; nnr < grid.height; nnr++){
-            int wherep= nnr*grid.width;
-            cv::line(rowFrame, CenterPoints[idVector[wherep]], CenterPoints[idVector[wherep + grid.width - 1]], cv::Scalar(120, 10, 10), 2, 8 );
+    if(allowDraw){
+        for(int k = 0; k < points2.size(); k++){
+                    //boundRect[points2[k]] = cv::minAreaRect(cv::Mat(contours[points2[k]]));
+                    //if( contours[points2[k]].size() > 5 )
+                    //    minEllipse[points2[k]] = cv::fitEllipse( cv::Mat(contours[points2[k]]) );
+
+                    cv::ellipse( rowFrame, minEllipse[points2[k]], cv::Scalar(0,255,0), 2, 8 );
+                    //cv::putText(rowFrame, std::to_string(k), CenterPoints[idVector[k]], 1, 2, cv::Scalar(255, 0, 0));
+                    // Uncomment bellow to drawBounding boxes
+         }
+        // Draw the ChessBoard!
+        if(CenterPoints.size() == nPatternCenters){
+            for(int nnr = 0; nnr < grid.height; nnr++){
+                int wherep= nnr*grid.width;
+                cv::line(rowFrame, CenterPoints[idVector[wherep]], CenterPoints[idVector[wherep + grid.width - 1]], cv::Scalar(120, 10, 10), 2, 8 );
+            }
         }
-    }
 
-    for(int m = 0; m < CenterPoints.size(); m++){
-           cv::putText(rowFrame, std::to_string(m), CenterPoints[idVector[m]], 1, 2, cv::Scalar(255, 0, 0), 2, 8);
+        for(int m = 0; m < CenterPoints.size(); m++){
+               cv::putText(rowFrame, std::to_string(m), CenterPoints[idVector[m]], 1, 2, cv::Scalar(255, 0, 0), 2, 8);
+        }
+
     }
     cv::putText(rowFrame, std::to_string(points2.size()), cv::Point(50, 20), 1, 2, cv::Scalar(0, 0, 255), 2, 8);
+
 }
 
 #endif // PROCESSIMAGE_H
