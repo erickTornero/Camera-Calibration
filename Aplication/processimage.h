@@ -90,6 +90,15 @@ struct indxval{
     float dist;
     indxval(int in, float v):index(in), dist(v){}
 };
+struct Grid{
+    int width;
+    int height;
+    Grid(int w, int h):width(w), height(h){}
+    void set(int w, int h){
+        width = w;
+        height = h;
+    }
+};
 
 /*
  *      Compute distance from Point to a Rect
@@ -187,6 +196,22 @@ void SortIndexes(const std::vector<cv::Point> & Centers, int * indexes, int size
     }*/
 }
 
+int getIndexTable(cv::Point p, int space, Grid grid, int errorlimit = 0.1){
+    float dx = (float) p.x/space;
+    float dy = (float) p.y/space;
+
+    float dxI = (float)(int(dx + 0.5));
+    float dyI = (float)(int(dy + 0.5));
+    float ex2 = (dxI - dx)*(dxI - dx);
+    float ey2 = (dyI - dy)*(dyI - dy);
+    if(sqrtf(ex2 + ey2) < errorlimit){
+        int y = grid.width*int(dy + 0.5);
+        int x = int(dx + 0.5);
+        return x + y;
+    }
+    return -1;
+}
+
 /*
  *      |    ReassingIdx    |
  *      ---------------------
@@ -204,7 +229,7 @@ void SortIndexes(const std::vector<cv::Point> & Centers, int * indexes, int size
  *      Step 3: Apply Bilinear transformation
  *      Step 4: Map to each Index.
  */
-bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatternCenters, cv::Mat & im, float eps){
+bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatternCenters, cv::Mat & im, float eps, Grid grid){
     if(CenterPoints.size() != nPatternCenters)
         return false;
 
@@ -299,6 +324,7 @@ bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatte
         }
 
     }
+
     SortIndexes(CenterPoints, position, 4);
 
     // Step 2: Sort the corners
@@ -307,6 +333,28 @@ bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatte
         pname.append(std::to_string(k+1));
         cv::putText(im, pname, CenterPoints[position[k]], 1, 2, cv::Scalar(255, 255, 0), 2, 8);
     }
+
+    int widthBound, heightBound;
+    widthBound = (grid.width-1)*20;
+    heightBound = (grid.height-1)*20;
+
+    float * coefX = new float[4];
+    float * coefY = new float[4];
+    int X1[4] = {CenterPoints[position[0]].x, CenterPoints[position[1]].x, CenterPoints[position[2]].x, CenterPoints[position[3]].x};
+    int Y1[4] = {CenterPoints[position[0]].y, CenterPoints[position[1]].y, CenterPoints[position[2]].y, CenterPoints[position[3]].y};
+    int X2[4] = {0, widthBound, widthBound, 0};
+    int Y2[4] = {0, 0, heightBound, heightBound};
+    //auto t1 = std::chrono::high_resolution_clock::now();
+    ComputeBilinearCoeff(X1, Y1, X2, Y2, coefX, coefY, 4);
+    //auto t2 = std::chrono::high_resolution_clock::now();
+    for(int kk = 0; kk < CenterPoints.size(); kk++){
+        float d[4] = {(float)CenterPoints[kk].x, (float)CenterPoints[kk].y, (float)CenterPoints[kk].y*CenterPoints[kk].x, 1.0};
+        cv::Point PTransform(DotProduct(coefX, d, 4),DotProduct(coefY, d, 4));
+        int indexCenter = getIndexTable(PTransform, 20, grid, 0.1);
+        idVector[kk] = indexCenter;
+    }
+    delete [] coefX;
+    delete [] coefY;
     cv::Point centerRect = rect.center;
     /*for(int k = 0; k < 4; k++){
         double maxCenterDistance = 0.0;
@@ -492,9 +540,16 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
     if(reassign && CenterPoints.size() == nPatternCenters){
         //Initialize ID
         for(int i = 0; i < nPatternCenters; i++){
-            idVector[i] = i;
+            //idVector[i] = i;
         }
-        if(ReassingIdx(idVector, CenterPoints, nPatternCenters, rowFrame, eps)){
+        Grid g(0,0);
+        if(nPatternCenters == 20){
+            g.set(5, 4);
+        }
+        else if (nPatternCenters == 12) {
+            g.set(4, 3);
+        }
+        if(ReassingIdx(idVector, CenterPoints, nPatternCenters, rowFrame, eps, g)){
             std::string s= "Exim";
             s.append(std::to_string(ccc));
             s.append(".png");
