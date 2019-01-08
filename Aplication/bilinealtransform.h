@@ -164,9 +164,9 @@ void ComputeBilinearCoeff(int * X1, int * Y1, int * X2, int * Y2, float * coefX,
         TransformX[i][2] = (float)X1[i]*(float)Y1[i];
         TransformX[i][3] = 1.0;
 
-        TransformY[i][0] = X2[i];
-        TransformY[i][1] = (float)Y2[i];
-        TransformY[i][2] = (float)X2[i]*(float)Y2[i];
+        TransformY[i][0] = X1[i];
+        TransformY[i][1] = (float)Y1[i];
+        TransformY[i][2] = (float)X1[i]*(float)Y1[i];
         TransformY[i][3] = 1.0;
     }
     printm(TransformX, 4, 4);

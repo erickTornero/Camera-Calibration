@@ -196,9 +196,9 @@ void SortIndexes(const std::vector<cv::Point> & Centers, int * indexes, int size
     }*/
 }
 
-int getIndexTable(cv::Point p, int space, Grid grid, int errorlimit = 0.1){
-    float dx = (float) p.x/space;
-    float dy = (float) p.y/space;
+int getIndexTable(cv::Point p, int space, Grid grid, float errorlimit = 0.1f){
+    float dx = (float) p.x/(float)space;
+    float dy = (float) p.y/(float)space;
 
     float dxI = (float)(int(dx + 0.5));
     float dyI = (float)(int(dy + 0.5));
@@ -210,6 +210,30 @@ int getIndexTable(cv::Point p, int space, Grid grid, int errorlimit = 0.1){
         return x + y;
     }
     return -1;
+}
+
+bool ComputeIndexes(int * idVector, const std::vector<cv::Point> & CenterPoints, int nPatternCenters, float * coefX, float * coefY, Grid grid){
+    bool indexesUsed[nPatternCenters];
+    memset(indexesUsed, false, nPatternCenters*sizeof (bool));
+    //auto t2 = std::chrono::high_resolution_clock::now();
+    for(int kk = 0; kk < CenterPoints.size(); kk++){
+        float dd[4] = {(float)CenterPoints[kk].x, (float)CenterPoints[kk].y, (float)CenterPoints[kk].y*CenterPoints[kk].x, 1.0};
+        cv::Point PTransform(DotProduct(coefX, dd, 4),DotProduct(coefY, dd, 4));
+
+        int indexCenter = getIndexTable(PTransform, 20, grid, 0.5f);
+        std::cout<<"Map->"<<" ("<<CenterPoints[kk].x<<", "<<CenterPoints[kk].y<<") --> "<<"( "<<PTransform.x<<", "<<PTransform.y<<") -->"<<indexCenter<<std::endl;
+
+        if(!indexesUsed[indexCenter]){
+            indexesUsed[indexCenter] = true;
+            idVector[indexCenter] = kk;
+        }
+        else
+            return false;
+        //if(indexCenter == -1){
+        //    cv::putText(im, "-1", cv::Point(100,100), 1, 2, cv::Scalar(0, 100, 255));
+        //}
+    }
+    return true;
 }
 
 /*
@@ -324,10 +348,10 @@ bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatte
         }
 
     }
-
+    // Step 2: Sort the corners
     SortIndexes(CenterPoints, position, 4);
 
-    // Step 2: Sort the corners
+
     for(int k = 0; k < 4; k++){
         std::string pname = "P";
         pname.append(std::to_string(k+1));
@@ -346,13 +370,23 @@ bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatte
     int Y2[4] = {0, 0, heightBound, heightBound};
     //auto t1 = std::chrono::high_resolution_clock::now();
     ComputeBilinearCoeff(X1, Y1, X2, Y2, coefX, coefY, 4);
+    if(!ComputeIndexes(idVector, CenterPoints, nPatternCenters, coefX, coefY, grid)){
+        ComputeIndexes(idVector, CenterPoints, nPatternCenters, coefX, coefY, Grid(grid.height, grid.width));
+    }
+    /*bool indexesUsed[nPatternCenters];
+    memset(indexesUsed, false, nPatternCenters*sizeof (bool));
     //auto t2 = std::chrono::high_resolution_clock::now();
     for(int kk = 0; kk < CenterPoints.size(); kk++){
-        float d[4] = {(float)CenterPoints[kk].x, (float)CenterPoints[kk].y, (float)CenterPoints[kk].y*CenterPoints[kk].x, 1.0};
-        cv::Point PTransform(DotProduct(coefX, d, 4),DotProduct(coefY, d, 4));
-        int indexCenter = getIndexTable(PTransform, 20, grid, 0.1);
-        idVector[kk] = indexCenter;
-    }
+        float dd[4] = {(float)CenterPoints[kk].x, (float)CenterPoints[kk].y, (float)CenterPoints[kk].y*CenterPoints[kk].x, 1.0};
+        cv::Point PTransform(DotProduct(coefX, dd, 4),DotProduct(coefY, dd, 4));
+
+        int indexCenter = getIndexTable(PTransform, 20, grid, 0.5f);
+        std::cout<<"Map->"<<" ("<<CenterPoints[kk].x<<", "<<CenterPoints[kk].y<<") --> "<<"( "<<PTransform.x<<", "<<PTransform.y<<") -->"<<indexCenter<<std::endl;
+        idVector[indexCenter] = kk;
+        if(indexCenter == -1){
+            cv::putText(im, "-1", cv::Point(100,100), 1, 2, cv::Scalar(0, 100, 255));
+        }
+    }*/
     delete [] coefX;
     delete [] coefY;
     cv::Point centerRect = rect.center;
