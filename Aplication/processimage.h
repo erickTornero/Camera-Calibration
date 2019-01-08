@@ -3,10 +3,12 @@
 # include <opencv2/opencv.hpp>
 # include <stdio.h>
 # include <vector>
+# include <queue>
 # include <string.h>
 # include <stdlib.h>
 # include <chrono>
 //# include "IntegrarThreshold.hpp"
+# include "bilinealtransform.h"
 #include <limits.h>
 void thresholdIntegral(cv::Mat &inputMat, cv::Mat &outputMat)
 {
@@ -83,6 +85,138 @@ void thresholdIntegral(cv::Mat &inputMat, cv::Mat &outputMat)
         }
     }
 }
+struct indxval{
+    int index;
+    float dist;
+    indxval(int in, float v):index(in), dist(v){}
+};
+float distanceRectToPoint(float A, float B, float C, cv::Point P1){
+    float den = A*P1.x + B*P1.y + C;
+    float num = sqrtf(A*A + B*B);
+
+    return den/num;
+}
+void SortVector(std::vector<indxval> & vec){
+    int i = 0;
+    while(i < vec.size()){
+        float x = vec[i].dist;
+        int j = i - 1;
+        while (j >= 0 ) {
+            if(vec[j].dist > x){
+                vec[j + 1] = vec[j];
+                j = j - 1;
+            }
+        }
+        vec[j + 1] = vec[i];
+        i = i + 1;
+    }
+}
+
+bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatternCenters, cv::Mat & im){
+    if(CenterPoints.size() != nPatternCenters)
+        return false;
+
+    // Step 1:
+    // Get the Index of Points that define the MBB
+    int p1 = -1, p2 = -1, p3 = -1, p4 = -1;
+    int epsilon = 5;
+    int xmax = 0, xmin = 3000, ymax = 0, ymin = 3000;
+    int yofxmax = 0, yofxmin = 3000, xofymax = 0, xofymin = 3000;
+    /*
+     * (p4) *****************  (p3)
+     *     *               *
+     *    *               *  ymin
+     *   ***************** (p2)
+     *  (p1)
+     *
+     */
+    cv::RotatedRect rect = cv::minAreaRect(CenterPoints);
+    cv::Point2f rec_points[4];
+    rect.points(rec_points);
+
+    for(size_t j = 0; j < 4; j++){
+        cv::line(im, rec_points[j], rec_points[(j+1)%4], cv::Scalar(255,0,0), 4, 8);
+    }
+    int position[4] = {-1, -1, -1, -1};
+    double eps = 20.0;
+    //int maxnComponents = 20;
+    //std::vector<std::priority_queue<int>> indexPossible(4);
+    for(int k = 0; k < 4; k++){
+        cv::Point P1 = rec_points[k];
+        double minDistance = 1000.0;
+
+        for(int i = 0; i < CenterPoints.size(); i++){
+            double distance = cv::norm(P1 - CenterPoints[i]);
+            if(distance < minDistance && distance < eps){
+                position[k] = i;
+                minDistance = distance;
+                //minDistance = distance;
+                //indexPossible[k].push(i);
+                //if(indexPossible[k].size() > maxnComponents)
+                //    indexPossible[k].pop();
+            }
+        }
+    }
+    for(int k = 0; k < 4; k++){
+        if(position[k] == -1){
+            int idx1 = (k + 1)%4, idx2 = (k + 3)%4;
+            float pend = (float)(CenterPoints[position[idx2]].y - CenterPoints[position[idx1]].y)/(float)(CenterPoints[position[idx2]].x - CenterPoints[position[idx1]].x);
+            float c = (float)(CenterPoints[position[idx2]].y - pend*CenterPoints[position[idx2]].x);
+            cv::line(im, CenterPoints[position[idx2]], CenterPoints[position[idx1]], cv::Scalar(255,0,255), 4, 8);
+
+            std::cout<<"y = "<<pend<<" x + " <<c<<std::endl;
+            float maxd = 0.0;
+
+            for(int m = 0; m < CenterPoints.size(); m++){
+                cv::Point P1 = CenterPoints[m];
+                float di = distanceRectToPoint(pend, -1.0, c, P1);
+                if(di > maxd){
+                    position[k] = m;
+                    maxd = di;
+                }
+            }
+            float pend2 = -1/pend;
+            cv::Point Pm = CenterPoints[position[k]];
+            float c2 = Pm.y - pend2*Pm.x;
+            cv::Point intersection = cv::Point((c - c2)/(pend2 - pend), pend*(c - c2)/(pend2-pend) + c);
+            cv::line(im, Pm, intersection, cv::Scalar(255,255,0), 4, 8);
+
+            if(position[(k + 2)%4] == -1 || position[(k + 2)%4] == position[k]){
+                float mind = 10000.0;
+                for(int m = 0; m < CenterPoints.size(); m++){
+                    cv::Point P1 = CenterPoints[m];
+                    float di = distanceRectToPoint(pend, -1.0, c, P1);
+                    if(di < mind){
+                        position[(k + 2)%4] = m;
+                        mind = di;
+                    }
+                }
+            }
+            break;
+        }
+    }
+    cv::Point centerRect = rect.center;
+    /*for(int k = 0; k < 4; k++){
+        double maxCenterDistance = 0.0;
+        for(int i = 0; i < indexPossible[k].size(); i++){
+            int idx = indexPossible[k].top();
+            double distCenter = cv::norm(centerRect - CenterPoints[idx]) ;
+            cv::circle(im, CenterPoints[idx], 5, cv::Scalar(80*k, 0, 80*k), 4, 8);
+            if(distCenter > maxCenterDistance){
+                maxCenterDistance = distCenter;
+                //position[k] = idx;
+            }
+            indexPossible[k].pop();
+        }
+    }*/
+
+    for(size_t j = 0; j < 4; j++){
+        cv::line(im, CenterPoints[position[j]], CenterPoints[position[(j+1)%4]], cv::Scalar(0,0,255), 4, 8);
+    }
+    return true;
+
+}
+int ccc = 0;
 void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGaussFrame, cv::Mat & thresholdFrame, cv::Mat & integralFrame, int nPatternCenters, int * idVector, std::vector<cv::Point> & CentersPrev, bool & reassign ,double & acumTime, float & szpromEllipse, int & Xmax, int & Ymax, int & Xmin, int & Ymin){
     auto t1 = std::chrono::high_resolution_clock::now();
     int PatternSIZE = 60;
@@ -112,7 +246,7 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
     //int Ymax = 1000.0;
     //int Xmin = 0.0;
     //int Ymin = 0.0;
-    std::cout<<szpromEllipse<<std::endl;
+    //std::cout<<szpromEllipse<<std::endl;
     //std::vector<cv::Point> CentersPrev;
 
 
@@ -237,13 +371,20 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
 
     bool indexesUses[CenterPoints.size()];
     memset(indexesUses, false, CenterPoints.size()*sizeof(bool));
+
     if(reassign && CenterPoints.size() == nPatternCenters){
         //Initialize ID
         for(int i = 0; i < nPatternCenters; i++){
             idVector[i] = i;
         }
-        reassign = false;
-
+        if(ReassingIdx(idVector, CenterPoints, nPatternCenters, rowFrame)){
+            std::string s= "Exim";
+            s.append(std::to_string(ccc));
+            s.append(".png");
+            ccc++;
+            cv::imwrite(s, rowFrame);
+            reassign = false;
+        }
     }
     else{
         for(int k = 0; k < CentersPrev.size(); k++){
@@ -269,7 +410,7 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
     auto t2 = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count();
     acumTime += (double)duration;
-    cv::rectangle(rowFrame, cv::Point(Xmin, Ymin), cv::Point(Xmax, Ymax), cv::Scalar(0, 0, 255), 4, 8);
+    //cv::rectangle(rowFrame, cv::Point(Xmin, Ymin), cv::Point(Xmax, Ymax), cv::Scalar(0, 0, 255), 4, 8);
     for(int k = 0; k < points2.size(); k++){
                 //boundRect[points2[k]] = cv::minAreaRect(cv::Mat(contours[points2[k]]));
                 //if( contours[points2[k]].size() > 5 )
