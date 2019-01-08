@@ -112,7 +112,7 @@ void SortVector(std::vector<indxval> & vec){
     }
 }
 
-bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatternCenters, cv::Mat & im){
+bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatternCenters, cv::Mat & im, float eps){
     if(CenterPoints.size() != nPatternCenters)
         return false;
 
@@ -138,7 +138,7 @@ bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatte
         cv::line(im, rec_points[j], rec_points[(j+1)%4], cv::Scalar(255,0,0), 4, 8);
     }
     int position[4] = {-1, -1, -1, -1};
-    double eps = 20.0;
+    //float eps = 20.0;
     //int maxnComponents = 20;
     //std::vector<std::priority_queue<int>> indexPossible(4);
     for(int k = 0; k < 4; k++){
@@ -160,6 +160,8 @@ bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatte
     for(int k = 0; k < 4; k++){
         if(position[k] == -1){
             int idx1 = (k + 1)%4, idx2 = (k + 3)%4;
+            if(position[idx1] == -1 || position[idx2] == -1)
+                return false;
             float pend = (float)(CenterPoints[position[idx2]].y - CenterPoints[position[idx1]].y)/(float)(CenterPoints[position[idx2]].x - CenterPoints[position[idx1]].x);
             float c = (float)(CenterPoints[position[idx2]].y - pend*CenterPoints[position[idx2]].x);
             cv::line(im, CenterPoints[position[idx2]], CenterPoints[position[idx1]], cv::Scalar(255,0,255), 4, 8);
@@ -225,18 +227,23 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
     //    epsilon = 4.0;
     // Epsilon Bounding box comparison with previous bounding box, must be scaled
     double epsilonBB = 60.0; //Second Pattern: 80, First pattern: 85
+    //epsilon to compute corners in reassingCorners Function
+    float eps = 20.0;
     // Epsilon for diferences of Sizes:
     float epsilonSZEl = 95.0; //Second Pattern, Fist Pattern: 80, 95 /obs 55 or 95 of this parameter not provide difference
     if (szpromEllipse > 17){
         epsilon = 3.0;
         epsilonBB = 45;
+        eps = 30.0;
     }
     else if (szpromEllipse < 9) {
         epsilonBB = 20;
+        eps = 16.0;
     }
     else{
         epsilon = 2.0;
         epsilonBB = 45;
+        eps = 20.0;
     }
     int ncicles = 120;
 
@@ -377,7 +384,7 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
         for(int i = 0; i < nPatternCenters; i++){
             idVector[i] = i;
         }
-        if(ReassingIdx(idVector, CenterPoints, nPatternCenters, rowFrame)){
+        if(ReassingIdx(idVector, CenterPoints, nPatternCenters, rowFrame, eps)){
             std::string s= "Exim";
             s.append(std::to_string(ccc));
             s.append(".png");
