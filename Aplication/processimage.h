@@ -236,6 +236,15 @@ bool ComputeIndexes(int * idVector, const std::vector<cv::Point> & CenterPoints,
     return true;
 }
 
+bool ComputeCoefficients(const std::vector<cv::Point> & CenterPoints, int widthBound, int heightBound, int * position, float * coefX, float * coefY){
+    int X1[4] = {CenterPoints[position[0]].x, CenterPoints[position[1]].x, CenterPoints[position[2]].x, CenterPoints[position[3]].x};
+    int Y1[4] = {CenterPoints[position[0]].y, CenterPoints[position[1]].y, CenterPoints[position[2]].y, CenterPoints[position[3]].y};
+    int X2[4] = {0, widthBound, widthBound, 0};
+    int Y2[4] = {0, 0, heightBound, heightBound};
+    //auto t1 = std::chrono::high_resolution_clock::now();
+    ComputeBilinearCoeff(X1, Y1, X2, Y2, coefX, coefY, 4);
+}
+
 /*
  *      |    ReassingIdx    |
  *      ---------------------
@@ -364,14 +373,23 @@ bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatte
 
     float * coefX = new float[4];
     float * coefY = new float[4];
-    int X1[4] = {CenterPoints[position[0]].x, CenterPoints[position[1]].x, CenterPoints[position[2]].x, CenterPoints[position[3]].x};
+    /*int X1[4] = {CenterPoints[position[0]].x, CenterPoints[position[1]].x, CenterPoints[position[2]].x, CenterPoints[position[3]].x};
     int Y1[4] = {CenterPoints[position[0]].y, CenterPoints[position[1]].y, CenterPoints[position[2]].y, CenterPoints[position[3]].y};
     int X2[4] = {0, widthBound, widthBound, 0};
     int Y2[4] = {0, 0, heightBound, heightBound};
+    */
+    ComputeCoefficients(CenterPoints, widthBound, heightBound, position, coefX, coefY);
     //auto t1 = std::chrono::high_resolution_clock::now();
-    ComputeBilinearCoeff(X1, Y1, X2, Y2, coefX, coefY, 4);
+    //ComputeBilinearCoeff(X1, Y1, X2, Y2, coefX, coefY, 4);
     if(!ComputeIndexes(idVector, CenterPoints, nPatternCenters, coefX, coefY, grid)){
-        ComputeIndexes(idVector, CenterPoints, nPatternCenters, coefX, coefY, Grid(grid.height, grid.width));
+        //ComputeIndexes(idVector, CenterPoints, nPatternCenters, coefX, coefY, Grid(grid.height, grid.width));
+        int temp = position[0];
+        for(int pp = 0; pp < 4-1; pp++){
+            position[pp] = position[pp+1];
+        }
+        position[3] = temp;
+        ComputeCoefficients(CenterPoints, widthBound, heightBound, position, coefX, coefY);
+        ComputeIndexes(idVector, CenterPoints, nPatternCenters, coefX, coefY, grid);
     }
     /*bool indexesUsed[nPatternCenters];
     memset(indexesUsed, false, nPatternCenters*sizeof (bool));
@@ -438,6 +456,14 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
         eps = 20.0;
     }
     int ncicles = 120;
+
+    Grid grid(0,0);
+    if(nPatternCenters == 20){
+        grid.set(5, 4);
+    }
+    else if (nPatternCenters == 12) {
+        grid.set(4, 3);
+    }
 
     //float szpromEllipse = 1000.0;
     //Define the bounding box
@@ -576,14 +602,8 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
         for(int i = 0; i < nPatternCenters; i++){
             //idVector[i] = i;
         }
-        Grid g(0,0);
-        if(nPatternCenters == 20){
-            g.set(5, 4);
-        }
-        else if (nPatternCenters == 12) {
-            g.set(4, 3);
-        }
-        if(ReassingIdx(idVector, CenterPoints, nPatternCenters, rowFrame, eps, g)){
+
+        if(ReassingIdx(idVector, CenterPoints, nPatternCenters, rowFrame, eps, grid)){
             std::string s= "Exim";
             s.append(std::to_string(ccc));
             s.append(".png");
@@ -626,6 +646,10 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
                 //cv::putText(rowFrame, std::to_string(k), CenterPoints[idVector[k]], 1, 2, cv::Scalar(255, 0, 0));
                 // Uncomment bellow to drawBounding boxes
      }
+    for(int nnr = 0; nnr < grid.height; nnr++){
+        int wherep= nnr*grid.width;
+        cv::line(rowFrame, CenterPoints[idVector[wherep]], CenterPoints[idVector[wherep + grid.width - 1]], cv::Scalar(120, 10, 10), 2, 8 );
+    }
     for(int m = 0; m < CenterPoints.size(); m++){
            cv::putText(rowFrame, std::to_string(m), CenterPoints[idVector[m]], 1, 2, cv::Scalar(255, 0, 0), 2, 8);
     }
