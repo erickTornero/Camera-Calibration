@@ -90,12 +90,18 @@ struct indxval{
     float dist;
     indxval(int in, float v):index(in), dist(v){}
 };
+
+/*
+ *      Compute distance from Point to a Rect
+ *      keep the sign of distance for future porpose
+ */
 float distanceRectToPoint(float A, float B, float C, cv::Point P1){
     float den = A*P1.x + B*P1.y + C;
     float num = sqrtf(A*A + B*B);
 
     return den/num;
 }
+
 void SortVector(std::vector<indxval> & vec){
     int i = 0;
     while(i < vec.size()){
@@ -111,17 +117,97 @@ void SortVector(std::vector<indxval> & vec){
         i = i + 1;
     }
 }
+void SortIndexes(const std::vector<cv::Point> & Centers, int * indexes, int sizeIndex = 4){
 
+    int indMinY = 0;
+    int minY = Centers[indexes[0]].y;
+
+    for(int i = 1; i < 4;i++){
+        if(Centers[indexes[i]].y < minY){
+            indMinY = i;
+            minY = Centers[indexes[i]].y;
+        }
+    }
+    int tmp = indexes[indMinY];
+    indexes[indMinY] = indexes[0];
+    indexes[0] = tmp;
+    // Compute the second minY
+    int secondMinY = 1;
+    int minY2 = Centers[indexes[1]].y;
+    for(int i = 2; i < 4;i++){
+        if(Centers[indexes[i]].y < minY2){
+            secondMinY = i;
+            minY2 = Centers[indexes[i]].y;
+        }
+    }
+    tmp = indexes[secondMinY];
+    indexes[secondMinY] = indexes[1];
+    indexes[1] = tmp;
+
+    if(Centers[indexes[0]].x > Centers[indexes[1]].x){
+        tmp = indexes[0];
+        indexes[0] = indexes[1];
+        indexes[1] = tmp;
+    }
+    if(Centers[indexes[2]].x < Centers[indexes[3]].x){
+        tmp = indexes[2];
+        indexes[2] = indexes[3];
+        indexes[3] = tmp;
+    }
+    /*
+    while(i < sizeIndex){
+        float x = Centers[indexes[i]].y;
+        int curIdx = indexes[i];
+        int j = i - 1;
+        while (j >= 0 ) {
+            if(Centers[indexes[j]].y > x){
+                indexes[j + 1] = indexes[j];
+            }
+            j = j - 1;
+        }
+        indexes[j + 1] = curIdx;
+        i = i + 1;
+    }*/
+    /*
+    std::cout<<"Y ordered";
+    for(int i = 0; i < 4; i++){
+        std::cout<<"("<<Centers[indexes[i]].x<<", "<<Centers[indexes[i]].y<<") --";
+    }
+    std::cout<<std::endl;
+    */
+    /*
+    int minY1Indx = 0, minY2Indx = 1;
+    //find Y1:
+    int minY1 = Centers[indexes[0]].y;
+    for(int i = 1; i < sizeIndex; i++){
+        if(Centers[indexes[i]].y < minY1){
+            minY1Indx = i;
+            minY1 = Centers[indexes[i]].y;
+        }
+    }*/
+}
+
+/*
+ *      |    ReassingIdx    |
+ *      ---------------------
+ *      Assing Idx when is the first time or when the pattern is lost
+ *
+ *      Step 1: Get Corners:
+ *          - Aproximate to a rectangle: cv::minAreaRect(CenterPoints)
+ *          - Get At least 2 diagonal corners, this corners will be corners that have minimal distance with centerPoints (pattern) & corners of minAreaRect given an 'epsilon'
+ *          - if corners getted is in the range: 2<= #Corners < 4, then apply the following method:
+ *              -- Trace the diagonal with the two Points obtained
+ *              -- Compute the distance to this Rect, the minimal distance & the maximal distance will be the another corners
+ *      Step 2: Sort the corners:
+ *          - In such way that this is always in the same pseudo order
+ *
+ *      Step 3: Apply Bilinear transformation
+ *      Step 4: Map to each Index.
+ */
 bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatternCenters, cv::Mat & im, float eps){
     if(CenterPoints.size() != nPatternCenters)
         return false;
 
-    // Step 1:
-    // Get the Index of Points that define the MBB
-    int p1 = -1, p2 = -1, p3 = -1, p4 = -1;
-    int epsilon = 5;
-    int xmax = 0, xmin = 3000, ymax = 0, ymin = 3000;
-    int yofxmax = 0, yofxmin = 3000, xofymax = 0, xofymin = 3000;
     /*
      * (p4) *****************  (p3)
      *     *               *
@@ -129,6 +215,10 @@ bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatte
      *   ***************** (p2)
      *  (p1)
      *
+     */
+    /*
+     * Step 1: Get Corners
+     *  - Aproximate to a rectangle: cv::minAreaRect(CenterPoints)
      */
     cv::RotatedRect rect = cv::minAreaRect(CenterPoints);
     cv::Point2f rec_points[4];
@@ -141,6 +231,8 @@ bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatte
     //float eps = 20.0;
     //int maxnComponents = 20;
     //std::vector<std::priority_queue<int>> indexPossible(4);
+
+    // Get At least 2 diagonal corners, this corners will be corners that have minimal distance with centerPoints (pattern) & corners of minAreaRect given an 'epsilon'
     for(int k = 0; k < 4; k++){
         cv::Point P1 = rec_points[k];
         double minDistance = 1000.0;
@@ -157,18 +249,25 @@ bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatte
             }
         }
     }
+
+    //- if corners getted is in the range: 2<= #Corners < 4, then apply the following method:
+    //              -- Trace the diagonal with the two Points obtained
+    //              -- Compute the distance to this Rect, the minimal distance & the maximal distance will be the another corners
     for(int k = 0; k < 4; k++){
         if(position[k] == -1){
+            // Get the Index of diagonal Rect
             int idx1 = (k + 1)%4, idx2 = (k + 3)%4;
+            // If there's not defined the diagonal rect return false
             if(position[idx1] == -1 || position[idx2] == -1)
                 return false;
+            // Compute the Diagonal Rect.
             float pend = (float)(CenterPoints[position[idx2]].y - CenterPoints[position[idx1]].y)/(float)(CenterPoints[position[idx2]].x - CenterPoints[position[idx1]].x);
             float c = (float)(CenterPoints[position[idx2]].y - pend*CenterPoints[position[idx2]].x);
             cv::line(im, CenterPoints[position[idx2]], CenterPoints[position[idx1]], cv::Scalar(255,0,255), 4, 8);
 
             std::cout<<"y = "<<pend<<" x + " <<c<<std::endl;
+            // Get the Center of maximal distance to this Rect.
             float maxd = 0.0;
-
             for(int m = 0; m < CenterPoints.size(); m++){
                 cv::Point P1 = CenterPoints[m];
                 float di = distanceRectToPoint(pend, -1.0, c, P1);
@@ -183,6 +282,8 @@ bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatte
             cv::Point intersection = cv::Point((c - c2)/(pend2 - pend), pend*(c - c2)/(pend2-pend) + c);
             cv::line(im, Pm, intersection, cv::Scalar(255,255,0), 4, 8);
 
+            // If the other corner is not defined or if it is equals to the previous corner then compute the minimal distance
+            // Current this is the maximal distance but with negative signal, so this is the minimal distance
             if(position[(k + 2)%4] == -1 || position[(k + 2)%4] == position[k]){
                 float mind = 10000.0;
                 for(int m = 0; m < CenterPoints.size(); m++){
@@ -196,6 +297,15 @@ bool ReassingIdx(int * idVector, std::vector<cv::Point> CenterPoints, int nPatte
             }
             break;
         }
+
+    }
+    SortIndexes(CenterPoints, position, 4);
+
+    // Step 2: Sort the corners
+    for(int k = 0; k < 4; k++){
+        std::string pname = "P";
+        pname.append(std::to_string(k+1));
+        cv::putText(im, pname, CenterPoints[position[k]], 1, 2, cv::Scalar(255, 255, 0), 2, 8);
     }
     cv::Point centerRect = rect.center;
     /*for(int k = 0; k < 4; k++){
