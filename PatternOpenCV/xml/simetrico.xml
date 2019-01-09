@@ -2,7 +2,7 @@
 <opencv_storage>
 <Settings>
   <!-- Number of inner corners per a item row and column. (square, circle) -->
-  <BoardSize_Width> 7</BoardSize_Width>
+  <BoardSize_Width>7</BoardSize_Width>
   <BoardSize_Height>5</BoardSize_Height>
   
   <!-- The size of a square in some user defined metric system (pixel, millimeter)-->
