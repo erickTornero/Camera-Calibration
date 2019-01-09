@@ -221,9 +221,9 @@ bool ComputeIndexes(int * idVector, const std::vector<cv::Point> & CenterPoints,
         cv::Point PTransform(DotProduct(coefX, dd, 4),DotProduct(coefY, dd, 4));
 
         int indexCenter = getIndexTable(PTransform, 20, grid, 0.5f);
-        std::cout<<"Map->"<<" ("<<CenterPoints[kk].x<<", "<<CenterPoints[kk].y<<") --> "<<"( "<<PTransform.x<<", "<<PTransform.y<<") -->"<<indexCenter<<std::endl;
+        //std::cout<<"Map->"<<" ("<<CenterPoints[kk].x<<", "<<CenterPoints[kk].y<<") --> "<<"( "<<PTransform.x<<", "<<PTransform.y<<") -->"<<indexCenter<<std::endl;
 
-        if(!indexesUsed[indexCenter]){
+        if(!indexesUsed[indexCenter] ){
             indexesUsed[indexCenter] = true;
             idVector[indexCenter] = kk;
         }
@@ -644,7 +644,10 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
         if(CenterPoints.size() == nPatternCenters){
             for(int nnr = 0; nnr < grid.height; nnr++){
                 int wherep= nnr*grid.width;
-                cv::line(rowFrame, CenterPoints[idVector[wherep]], CenterPoints[idVector[wherep + grid.width - 1]], cv::Scalar(120, 10, 10), 2, 8 );
+                cv::line(rowFrame, CenterPoints[idVector[wherep]], CenterPoints[idVector[wherep + grid.width - 1]], cv::Scalar(94, 218, 250), 2, 8 );
+                if(wherep != 0){
+                    cv::line(rowFrame, CenterPoints[idVector[wherep]], CenterPoints[idVector[wherep - 1]], cv::Scalar(120, 10, 10), 2, 8);
+                }
             }
         }
 
