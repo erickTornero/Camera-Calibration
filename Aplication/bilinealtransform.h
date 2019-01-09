@@ -169,8 +169,8 @@ void ComputeBilinearCoeff(int * X1, int * Y1, int * X2, int * Y2, float * coefX,
         TransformY[i][2] = (float)X1[i]*(float)Y1[i];
         TransformY[i][3] = 1.0;
     }
-    printm(TransformX, 4, 4);
-    printm(TransformY, 4, 4);
+    //printm(TransformX, 4, 4);
+    //printm(TransformY, 4, 4);
     int * Bx = new int[nPairpoints];
     int * By = new int[nPairpoints];
     //std::cout<<"X20 "<<X2[0]<<" X21 "<<X2[1]<<std::endl;
@@ -195,11 +195,11 @@ void ComputeBilinearCoeff(int * X1, int * Y1, int * X2, int * Y2, float * coefX,
     delete [] TransformX;
     delete [] TransformY;
     // Coefficients X:
-    std::cout<<" Coefficients X:\n";
+    /*std::cout<<" Coefficients X:\n";
     printvector(coefX, nPairpoints);
     std::cout<<" Coefficients Y:\n";
     printvector(coefY, nPairpoints);
-    
+    */
 }
 
 unsigned char * Bilinear(unsigned char * data, unsigned char * BilinearData, int * X1, int * Y1, int * X2, int * Y2, int w, int h){
