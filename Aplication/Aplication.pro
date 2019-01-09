@@ -31,7 +31,8 @@ SOURCES += \
 HEADERS += \
         mainwindow.h \
     #IntegrarThreshold.hpp \
-    processimage.h
+    processimage.h \
+    bilinealtransform.h
 
 FORMS += \
         mainwindow.ui
