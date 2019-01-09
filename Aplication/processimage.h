@@ -223,7 +223,7 @@ bool ComputeIndexes(int * idVector, const std::vector<cv::Point> & CenterPoints,
         int indexCenter = getIndexTable(PTransform, 20, grid, 0.5f);
         //std::cout<<"Map->"<<" ("<<CenterPoints[kk].x<<", "<<CenterPoints[kk].y<<") --> "<<"( "<<PTransform.x<<", "<<PTransform.y<<") -->"<<indexCenter<<std::endl;
 
-        if(!indexesUsed[indexCenter] ){
+        if(!indexesUsed[indexCenter] && indexCenter != -1){
             indexesUsed[indexCenter] = true;
             idVector[indexCenter] = kk;
         }
@@ -244,6 +244,10 @@ bool ComputeCoefficients(const std::vector<cv::Point> & CenterPoints, int widthB
     //auto t1 = std::chrono::high_resolution_clock::now();
     ComputeBilinearCoeff(X1, Y1, X2, Y2, coefX, coefY, 4);
     return true;
+}
+
+void runCalibrateCamera(std::vector<std::vector<cv::Vec3f>> VecImgs, std::vector<std::vector<cv::Vec2f>> vec2, ){
+
 }
 
 /*
