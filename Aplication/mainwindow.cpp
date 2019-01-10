@@ -237,12 +237,7 @@ void MainWindow::on_btnCalibrate_clicked()
     }
 
     cv::Mat cameraMatrix= cv::Mat::eye(3, 3, CV_64F);
-    for ( int ii=0;ii<3;ii++) {
-        for ( int jj=0; jj<3; jj++) {
-            std::cout<<cameraMatrix.at<double>(ii,jj)<<" ";
-        }
-        std::cout<< std::endl;
-    }
+
     cv::Mat distCoeff = cv::Mat::zeros(8, 1, CV_64F);
 
     std::vector<cv::Mat> rvecs;
@@ -257,7 +252,7 @@ void MainWindow::on_btnCalibrate_clicked()
     ui->plainTextEditLog->appendPlainText(QString("Fy = ") + QString::number(cameraMatrix.at<double>(1,1)));
     ui->plainTextEditLog->appendPlainText(QString("Cx = ") + QString::number(cameraMatrix.at<double>(0,2)));
     ui->plainTextEditLog->appendPlainText(QString("Cy = ") + QString::number(cameraMatrix.at<double>(1,2)));
-    std::cout<<"RMS> "<<rms<<std::endl;
+    /*std::cout<<"RMS> "<<rms<<std::endl;
     for ( int ii=0;ii<3;ii++) {
         for ( int jj=0;jj<3;jj++) {
             std::cout<<cameraMatrix.at<double>(ii,jj)<<" ";
@@ -265,5 +260,5 @@ void MainWindow::on_btnCalibrate_clicked()
         std::cout<< std::endl;
     }
     int x = 21;
-
+    */
 }

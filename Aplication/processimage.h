@@ -252,14 +252,14 @@ double runCalibrateCamera(const std::vector<std::vector<cv::Vec2f>> & centersInI
     std::vector<std::vector<cv::Point3f>> pointsRealImage(1);
     for(int i = 0; i < grid.height; i++){
         for(int j = 0; j < grid.width; j++){
-            pointsRealImage[0].push_back(cv::Point3f((float)j*6.267f, (float)i*6.3f, 0.0f));
+            pointsRealImage[0].push_back(cv::Point3f((float)j*spaceSize, (float)i*spaceSize, 0.0f));
         }
     }
 
     // Create many vec as images to calibrate there are
     pointsRealImage.resize(centersInImage.size(), pointsRealImage[0]);
     cameraMatrix.at<double>(0,0) = 1.0;
-    double rms = cv::calibrateCamera(pointsRealImage, centersInImage, imResolution, cameraMatrix, distCoeff, rvecs, tvecs, cv::CALIB_FIX_ASPECT_RATIO | cv::CALIB_FIX_K6 | cv::CALIB_RATIONAL_MODEL |cv::CALIB_FIX_K4 | cv::CALIB_FIX_K5);
+    double rms = cv::calibrateCamera(pointsRealImage, centersInImage, imResolution, cameraMatrix, distCoeff, rvecs, tvecs, cv::CALIB_FIX_ASPECT_RATIO | cv::CALIB_FIX_K6 |cv::CALIB_FIX_K4 | cv::CALIB_FIX_K5);
 
     return rms;
 }
