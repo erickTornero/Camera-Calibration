@@ -134,6 +134,10 @@ void MainWindow::on_btnCalibrate_clicked()
         ui->plainTextEditLog->appendPlainText("Insert a integer number of Centers\n");
         return;
     }
+    int nFramesToCalibrate = 60;
+    int getFrameMultipleBy = 40;
+
+    nFramesToCalibrate = ui->spinBoxPatternsToCalibrate->value();
 
     if(nPatternCenters == 12){
 
@@ -170,9 +174,11 @@ void MainWindow::on_btnCalibrate_clicked()
     int Ymin = 0.0;
     bool reassign = false;
     memset(idVector, -1, (nPatternCenters+20)*sizeof (int));
-    int nFramesToCalibrate = 60;
-    int getFrameMultipleBy = 40;
+
+    ui->progressBarCalibrate->setMaximum(nFramesToCalibrate + 1);
+    ui->progressBarCalibrate->setValue(0);
     std::vector<std::vector<cv::Vec2f>> CentersPatternsToCalibrate;
+    ui->plainTextEditLog->appendPlainText(QString(" - Loading Centers to Calibrate ...!"));
     while (CentersPatternsToCalibrate.size() < nFramesToCalibrate) {
         video>>frame;
         if(!frame.empty()){
@@ -217,6 +223,7 @@ void MainWindow::on_btnCalibrate_clicked()
                 ui->graphicsViewGauss->fitInView(&pixmapGauss, Qt::KeepAspectRatio);
                 ui->graphicsViewThres->fitInView(&pixmapThres, Qt::KeepAspectRatio);
                 ui->graphicsViewPat->fitInView(&pixmapPat, Qt::KeepAspectRatio);
+                ui->progressBarCalibrate->setValue(CentersPatternsToCalibrate.size());
             }
             //ui->graphicsView->scene()->addItem(&pixmap);
             cv::waitKey(0);
@@ -224,7 +231,10 @@ void MainWindow::on_btnCalibrate_clicked()
         else{
             keep = false;
         }
+        if(CentersPatternsToCalibrate.size() == nFramesToCalibrate)
+            ui->plainTextEditLog->appendPlainText(QString(" - Calibrating ...!"));
     }
+
     cv::Mat cameraMatrix= cv::Mat::eye(3, 3, CV_64F);
     for ( int ii=0;ii<3;ii++) {
         for ( int jj=0; jj<3; jj++) {
@@ -236,7 +246,16 @@ void MainWindow::on_btnCalibrate_clicked()
 
     std::vector<cv::Mat> rvecs;
     std::vector<cv::Mat> tvecs;
+
     double rms = runCalibrateCamera(CentersPatternsToCalibrate, cv::Size(640, 480), cameraMatrix, distCoeff, rvecs, tvecs, Grid(5,4), 4.8f);
+    ui->progressBarCalibrate->setValue(nFramesToCalibrate + 1);
+
+    ui->plainTextEditLog->appendPlainText(QString(" - Parameters Obtained Successfully!\n"));
+    ui->plainTextEditLog->appendPlainText(QString("RMS = ") + QString::number(rms) + QString("\n"));
+    ui->plainTextEditLog->appendPlainText(QString("Fx = ") + QString::number(cameraMatrix.at<double>(0,0)));
+    ui->plainTextEditLog->appendPlainText(QString("Fy = ") + QString::number(cameraMatrix.at<double>(1,1)));
+    ui->plainTextEditLog->appendPlainText(QString("Cx = ") + QString::number(cameraMatrix.at<double>(0,2)));
+    ui->plainTextEditLog->appendPlainText(QString("Cy = ") + QString::number(cameraMatrix.at<double>(1,2)));
     std::cout<<"RMS> "<<rms<<std::endl;
     for ( int ii=0;ii<3;ii++) {
         for ( int jj=0;jj<3;jj++) {
