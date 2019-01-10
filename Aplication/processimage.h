@@ -252,7 +252,7 @@ double runCalibrateCamera(const std::vector<std::vector<cv::Vec2f>> & centersInI
     std::vector<std::vector<cv::Point3f>> pointsRealImage(1);
     for(int i = 0; i < grid.height; i++){
         for(int j = 0; j < grid.width; j++){
-            pointsRealImage[0].push_back(cv::Point3d((float)j*spaceSize, (float)i*spaceSize, 0.0f));
+            pointsRealImage[0].push_back(cv::Point3f((float)j*6.267f, (float)i*6.3f, 0.0f));
         }
     }
 
@@ -564,7 +564,7 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
                             points2.push_back(poschild);
                             points2.push_back(posfather);
                             // Save the Center point
-                            CenterPoints.push_back(minEllipse[poschild].center);
+                            CenterPoints.push_back((minEllipse[poschild].center + minEllipse[posfather].center)/2.0);
                             // Compute the MBB of Current Frame;
                             if(minEllipse[poschild].center.x < xmin){
                                 xmin = minEllipse[poschild].center.x;
@@ -649,7 +649,7 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
     //cv::rectangle(rowFrame, cv::Point(Xmin, Ymin), cv::Point(Xmax, Ymax), cv::Scalar(0, 0, 255), 4, 8);
 
     if(allowDraw){
-        /*for(int k = 0; k < points2.size(); k++){
+        for(int k = 0; k < points2.size(); k++){
                     //boundRect[points2[k]] = cv::minAreaRect(cv::Mat(contours[points2[k]]));
                     //if( contours[points2[k]].size() > 5 )
                     //    minEllipse[points2[k]] = cv::fitEllipse( cv::Mat(contours[points2[k]]) );
@@ -671,7 +671,7 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
 
         for(int m = 0; m < CenterPoints.size(); m++){
                cv::putText(rowFrame, std::to_string(m), CenterPoints[idVector[m]], 1, 2, cv::Scalar(255, 0, 0), 2, 8);
-        }*/
+        }
 
     }
     cv::putText(rowFrame, std::to_string(points2.size()), cv::Point(50, 20), 1, 2, cv::Scalar(0, 0, 255), 2, 8);

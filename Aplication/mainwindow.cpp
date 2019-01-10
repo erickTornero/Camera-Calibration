@@ -36,12 +36,11 @@ void MainWindow::executeTask(){
 void MainWindow::OpenCamera(){
     bool isCamera = false;
     bool ok;
-    int nPatternCenters = 12;
-    int ncenters = ui->textnCenters->toPlainText().toInt(&ok);
-    if(ok)
-        nPatternCenters = ncenters;
-    else{
-        ui->plainTextEditLog->appendPlainText("Insert a integer number of Centers\n");
+    int nPatternCenters;
+    Grid grid(ui->spinBoxWidthPlay->value(), ui->spinBoxHeightPlay->value());
+    nPatternCenters = grid.height*grid.width;
+    if(nPatternCenters == 0){
+        ui->plainTextEditLog->appendPlainText("Insert the Grid of Pattern Properly\n");
         return;
     }
     QString filename = QFileDialog::getOpenFileName(this, tr("choose"), "", tr("Images (*.avi)"));
@@ -126,21 +125,19 @@ void MainWindow::on_btnCalibrate_clicked()
 {
     bool isCamera = false;
     bool ok;
-    int nPatternCenters = 12;
-    int ncenters = ui->textnCenters->toPlainText().toInt(&ok);
-    if(ok)
-        nPatternCenters = ncenters;
-    else{
-        ui->plainTextEditLog->appendPlainText("Insert a integer number of Centers\n");
-        return;
-    }
+    int nPatternCenters;
+    Grid grid(ui->spinBoxWidthCal->value(),ui->spinBoxHeightCal->value());
+    nPatternCenters = grid.width*grid.height;
+    float spaceValGrid =  float(ui->doubleSpinBoxSpaceCenters->value());
+
     int nFramesToCalibrate = 60;
     int getFrameMultipleBy = 40;
 
     nFramesToCalibrate = ui->spinBoxPatternsToCalibrate->value();
 
-    if(nPatternCenters == 12){
-
+    if(nFramesToCalibrate == 0 || spaceValGrid < 0.01 || nPatternCenters == 0){
+        ui->plainTextEditLog->appendPlainText(QString("Set Calibration parameters!!"));
+        return;
     }
     QString filename = QFileDialog::getOpenFileName(this, tr("choose"), "", tr("Images (*.avi)"));
     int cameraIndex = 0; //ui->videoEdit->text().toInt(&isCamera);
@@ -178,10 +175,14 @@ void MainWindow::on_btnCalibrate_clicked()
     ui->progressBarCalibrate->setMaximum(nFramesToCalibrate + 1);
     ui->progressBarCalibrate->setValue(0);
     std::vector<std::vector<cv::Vec2f>> CentersPatternsToCalibrate;
+
+    cv::Size frameSize;
     ui->plainTextEditLog->appendPlainText(QString(" - Loading Centers to Calibrate ...!"));
     while (CentersPatternsToCalibrate.size() < nFramesToCalibrate) {
         video>>frame;
         if(!frame.empty()){
+            if(nframes == 0)
+                frameSize = frame.size();
             nframes++;
             //if(nframes % 120 == 0){
                 double time = acumm/nframes;
@@ -203,9 +204,9 @@ void MainWindow::on_btnCalibrate_clicked()
                 }
                 CentersPatternsToCalibrate.push_back(centersTemp);
                 // Draw the ChessBoard!
-                for(int ttt = 0; ttt < centersTemp.size(); ttt++){
-                    cv::putText(frame, std::to_string(ttt), cv::Point(centersTemp[ttt].val[0], centersTemp[ttt].val[1]), 1, 2, cv::Scalar(255, 0, 0), 2, 8);
-                }
+                //for(int ttt = 0; ttt < centersTemp.size(); ttt++){
+                //    cv::putText(frame, std::to_string(ttt), cv::Point(centersTemp[ttt].val[0], centersTemp[ttt].val[1]), 1, 2, cv::Scalar(255, 0, 0), 2, 8);
+                //}
 
                 /*for(int m = 0; m < CenterPoints.size(); m++){
                        cv::putText(rowFrame, std::to_string(m), CenterPoints[idVector[m]], 1, 2, cv::Scalar(255, 0, 0), 2, 8);
@@ -247,7 +248,7 @@ void MainWindow::on_btnCalibrate_clicked()
     std::vector<cv::Mat> rvecs;
     std::vector<cv::Mat> tvecs;
 
-    double rms = runCalibrateCamera(CentersPatternsToCalibrate, cv::Size(640, 480), cameraMatrix, distCoeff, rvecs, tvecs, Grid(5,4), 4.8f);
+    double rms = runCalibrateCamera(CentersPatternsToCalibrate, frameSize, cameraMatrix, distCoeff, rvecs, tvecs, grid, spaceValGrid);
     ui->progressBarCalibrate->setValue(nFramesToCalibrate + 1);
 
     ui->plainTextEditLog->appendPlainText(QString(" - Parameters Obtained Successfully!\n"));
