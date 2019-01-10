@@ -1,11 +1,10 @@
 # include <opencv2/opencv.hpp>
 # include <stdio.h>
 # include <vector>
-#include <string>   
+# include <string>   
 # include <stdlib.h>
 # include <chrono>
-# include "IntegrarThreshold.cpp"
-#include <limits.h>
+# include <limits.h>
 
 using namespace cv;
 using namespace std;
@@ -58,43 +57,29 @@ int main(){
 
         counter++;
         if(counter % ncicles == 0){
-            std::cout<<acumTime/(double)ncicles<<std::endl;
+            //std::cout<<acumTime/(double)ncicles<<std::endl;
             acumTime = 0.0;
         }
         t1 = std::chrono::high_resolution_clock::now();
-        cv::Mat rowFrame, grayRowFrame, blurGaussFrame, thresholdFrame, cannyFrame, joinImages, closeFrame, erosionFrame, histogramFrame, adaptativeFrame, integralFrame, outputFrame;
+
+        Size patternsize(4, 3);
+        cv::Mat rowFrame, gray;
         video >> rowFrame;
-        cv::cvtColor(rowFrame, grayRowFrame, CV_RGB2GRAY);
-        GaussianBlur( grayRowFrame, blurGaussFrame, cv::Size( 5, 5 ), 0, 0 );
+        cv::imshow("result", rowFrame);
+        cv::cvtColor(rowFrame, gray, CV_RGB2GRAY);
+        cv::imshow("gray", gray);
+        //GaussianBlur( grayRowFrame, blurGaussFrame, cv::Size( 5, 5 ), 0, 0 );
 
-        if(approach == 1){
-            //cv::threshold(blurGaussFrame, thresholdFrame, 100, 255, CV_THRESH_BINARY);
-            //blurGaussFrame.copyTo(integralFrame);
-            cv::Mat element = cv::getStructuringElement( cv::MORPH_CROSS, cv::Size( 3, 3 ), cv::Point( 0, 0 ) );
-            //cv::erode( blurGaussFrame, erosionFrame, element );
-
-            //equalizeHist( blurGaussFrame, histogramFrame );
-
-
-            integralFrame = cv::Mat::zeros(blurGaussFrame.size(), CV_8UC1);
-            thresholdIntegral(blurGaussFrame, integralFrame);
-        
-            outputFrame = integralFrame;
-        }else if(approach == 2){
-            adaptiveThreshold(blurGaussFrame, adaptativeFrame, 125, ADAPTIVE_THRESH_MEAN_C, CV_THRESH_BINARY, 11, 12);
-            outputFrame = adaptativeFrame;
-        }
-
-        std::vector<std::vector<cv::Point> > contours;
-        std::vector<cv::Vec4i> hierarchy;
+        std::vector<Point2f> centers;
         //cv::findContours(thresholdFrame, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
-        cv::findContours(outputFrame, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
+        bool patternfound = cv::findCirclesGrid(gray, patternsize, centers);
             //first pass, avoid all points with no father and childs
-        std::vector<int> points;
-        for(int a = 0; a < contours.size(); a++){
-            if((hierarchy[a][2] >= 0 || hierarchy[a][3] >= 0) && contours[a].size() > 5)
-                points.push_back(a);
-        }
+        drawChessboardCorners(rowFrame, patternsize, Mat(centers), 1);
+
+        std::cout << "RES: " << std::endl;
+        std::cout << patternfound << std::endl;
+        std::cout << centers.size() << std::endl;
+
         //run for hole methods. if center of father are near, then add current point
         /*std::vector<cv::RotatedRect> minEllipse( contours.size() );
         std::vector<int> points2;
@@ -109,6 +94,7 @@ int main(){
                 }
             }
         }*/
+        /*
         std::vector<int> points2;
         //Get the MBB:
         int xmin = 3000;
@@ -160,7 +146,7 @@ int main(){
                     }
                 }
             }
-        }
+        }*/
         
         //ymax = 300;
         //getBoundBox(minEllipse, points2, xmin, ymin, xmax, ymax);
@@ -171,7 +157,7 @@ int main(){
         //cv::line(rowFrame, cv::Point(Xmin, Ymax), cv::Point(Xmin, Ymin), cv::Scalar(0, 0, 255), 4, 8);
         //cv::line( rowFrame, rect_points[j], , cv::Scalar(0, 0,255), 4, 8 );
         // For heuristic Elimination
-        szpromEllipse = szprom/(float)points2.size();
+        /*szpromEllipse = szprom/(float)points2.size();
         if(points2.size() != 0){
             Xmax = xmax;
             Xmin = xmin;
@@ -276,4 +262,6 @@ int main(){
     }
     video.release();
     cv::destroyAllWindows();
+    */
+    }
 }

@@ -4,7 +4,6 @@
 #include <string>   
 # include <stdlib.h>
 # include <chrono>
-# include "IntegrarThreshold.cpp"
 #include <limits.h>
 
 using namespace cv;
@@ -21,9 +20,92 @@ void getBoundBox(const std::vector<cv::RotatedRect> & minEllipse, const std::vec
   }
 
 }
+
+bool runCalibrationAndSave(Settings& s, Size imageSize, Mat& cameraMatrix, Mat& distCoeffs,
+                           vector<vector<Point2f> > imagePoints)
+{
+    vector<Mat> rvecs, tvecs;
+    vector<float> reprojErrs;
+    double totalAvgErr = 0;
+    bool ok = runCalibration(s, imageSize, cameraMatrix, distCoeffs, imagePoints, rvecs, tvecs, reprojErrs,
+                             totalAvgErr);
+    cout << (ok ? "Calibration succeeded" : "Calibration failed")
+         << ". avg re projection error = " << totalAvgErr << endl;
+    if (ok)
+        saveCameraParams(s, imageSize, cameraMatrix, distCoeffs, rvecs, tvecs, reprojErrs, imagePoints,
+                         totalAvgErr);
+    return ok;
+}
+
+static bool runCalibration( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat& distCoeffs,
+                            vector<vector<Point2f> > imagePoints, vector<Mat>& rvecs, vector<Mat>& tvecs,
+                            vector<float>& reprojErrs,  double& totalAvgErr, vector<Point3f>& newObjPoints,
+                            float grid_width, bool release_object)
+{
+    //! [fixed_aspect]
+    cameraMatrix = Mat::eye(3, 3, CV_64F);
+    if( s.flag & CALIB_FIX_ASPECT_RATIO )
+        cameraMatrix.at<double>(0,0) = s.aspectRatio;
+    //! [fixed_aspect]
+    if (s.useFisheye) {
+        distCoeffs = Mat::zeros(4, 1, CV_64F);
+    } else {
+        distCoeffs = Mat::zeros(8, 1, CV_64F);
+    }
+
+    vector<vector<Point3f> > objectPoints(1);
+    calcBoardCornerPositions(s.boardSize, s.squareSize, objectPoints[0], s.calibrationPattern);
+    objectPoints[0][s.boardSize.width - 1].x = objectPoints[0][0].x + grid_width;
+    newObjPoints = objectPoints[0];
+
+    objectPoints.resize(imagePoints.size(),objectPoints[0]);
+
+    //Find intrinsic and extrinsic camera parameters
+    double rms;
+
+    if (s.useFisheye) {
+        Mat _rvecs, _tvecs;
+        rms = fisheye::calibrate(objectPoints, imagePoints, imageSize, cameraMatrix, distCoeffs, _rvecs,
+                                 _tvecs, s.flag);
+
+        rvecs.reserve(_rvecs.rows);
+        tvecs.reserve(_tvecs.rows);
+        for(int i = 0; i < int(objectPoints.size()); i++){
+            rvecs.push_back(_rvecs.row(i));
+            tvecs.push_back(_tvecs.row(i));
+        }
+    } else {
+        int iFixedPoint = -1;
+        if (release_object)
+            iFixedPoint = s.boardSize.width - 1;
+        rms = calibrateCameraRO(objectPoints, imagePoints, imageSize, iFixedPoint,
+                                cameraMatrix, distCoeffs, rvecs, tvecs, newObjPoints,
+                                s.flag | CALIB_USE_LU);
+    }
+
+    if (release_object) {
+        cout << "New board corners: " << endl;
+        cout << newObjPoints[0] << endl;
+        cout << newObjPoints[s.boardSize.width - 1] << endl;
+        cout << newObjPoints[s.boardSize.width * (s.boardSize.height - 1)] << endl;
+        cout << newObjPoints.back() << endl;
+    }
+
+    cout << "Re-projection error reported by calibrateCamera: "<< rms << endl;
+
+    bool ok = checkRange(cameraMatrix) && checkRange(distCoeffs);
+
+    objectPoints.clear();
+    objectPoints.resize(imagePoints.size(), newObjPoints);
+    totalAvgErr = computeReprojectionErrors(objectPoints, imagePoints, rvecs, tvecs, cameraMatrix,
+                                            distCoeffs, reprojErrs, s.useFisheye);
+
+    return ok;
+}
+
 int main(){
     //cv::VideoCapture video("/home/erick/Documentos/MsCS/Images/VideosPrueba/VideosPrueba/PadronAnillos_01.avi");  
-    cv::VideoCapture video("../../files/padron1.avi");
+    cv::VideoCapture video("../../files/video.avi");
     // Epsilon to define the distance to center 
     int PatternSIZE = 60;
     int nPatternCenters = 30;
@@ -58,13 +140,29 @@ int main(){
 
         counter++;
         if(counter % ncicles == 0){
-            std::cout<<acumTime/(double)ncicles<<std::endl;
+            //std::cout<<acumTime/(double)ncicles<<std::endl;
             acumTime = 0.0;
         }
         t1 = std::chrono::high_resolution_clock::now();
         cv::Mat rowFrame, grayRowFrame, blurGaussFrame, thresholdFrame, cannyFrame, joinImages, closeFrame, erosionFrame, histogramFrame, adaptativeFrame, integralFrame, outputFrame;
         video >> rowFrame;
         cv::cvtColor(rowFrame, grayRowFrame, CV_RGB2GRAY);
+
+        std::vector<Point2f> centers;
+        //Size patternsize(4, 3);
+        Size patternsize(7, 5);
+        
+        bool patternfound = cv::findCirclesGrid(rowFrame, patternsize, centers);
+        //std::cout << patternfound << std::endl;
+        std::cout << centers.size() << std::endl;
+        
+        drawChessboardCorners(rowFrame, patternsize, Mat(centers), 1);
+        
+        cv::imshow("normal", rowFrame);
+        cv::imshow("Gray", grayRowFrame);
+        
+
+        /*
         GaussianBlur( grayRowFrame, blurGaussFrame, cv::Size( 5, 5 ), 0, 0 );
 
         if(approach == 1){
@@ -74,12 +172,8 @@ int main(){
             //cv::erode( blurGaussFrame, erosionFrame, element );
 
             //equalizeHist( blurGaussFrame, histogramFrame );
-
-
-            integralFrame = cv::Mat::zeros(blurGaussFrame.size(), CV_8UC1);
-            thresholdIntegral(blurGaussFrame, integralFrame);
         
-            outputFrame = integralFrame;
+            outputFrame = blurGaussFrame;
         }else if(approach == 2){
             adaptiveThreshold(blurGaussFrame, adaptativeFrame, 125, ADAPTIVE_THRESH_MEAN_C, CV_THRESH_BINARY, 11, 12);
             outputFrame = adaptativeFrame;
@@ -96,19 +190,7 @@ int main(){
                 points.push_back(a);
         }
         //run for hole methods. if center of father are near, then add current point
-        /*std::vector<cv::RotatedRect> minEllipse( contours.size() );
-        std::vector<int> points2;
-        for(int a = 0; a < points.size(); a++){
-            if(hierarchy[points[a]][2] == -1 ){
-                cv::RotatedRect elipseChild = cv::fitEllipse( cv::Mat(contours[points[a]]) );
-                cv::RotatedRect elipseFat = cv::fitEllipse(cv::Mat(contours[hierarchy[points[a]][3]]));
-                double val = cv::norm(elipseChild.center - elipseFat.center);
-                if(epsilon > val){
-                    points2.push_back(points[a]);
-                    points2.push_back(hierarchy[points[a]][3]);
-                }
-            }
-        }*/
+
         std::vector<int> points2;
         //Get the MBB:
         int xmin = 3000;
@@ -264,13 +346,19 @@ int main(){
         }
         
         //cv::hconcat(thresholdFrame, rowFrame, joinImages);
-        cv::imshow("Contours", rowFrame);
-        cv::imshow("Blur", blurGaussFrame);
+        //cv::imshow("Contours", rowFrame);
+        //cv::imshow("Blur", blurGaussFrame);
         if(approach == 1){
-            cv::imshow("Integral", integralFrame);
+            //cv::imshow("Integral", integralFrame);
         }else if(approach == 2){
-            cv::imshow("Adaptative", adaptativeFrame);
+            //cv::imshow("Adaptative", adaptativeFrame);
         }
+        if((char)cv::waitKey(25) == 27)
+            break;
+    }
+    video.release();
+    cv::destroyAllWindows();
+    */
         if((char)cv::waitKey(25) == 27)
             break;
     }
