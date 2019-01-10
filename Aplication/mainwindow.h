@@ -34,6 +34,8 @@ private slots:
     void on_pushButton_clicked();
     void executeTask();
 
+    void on_btnCalibrate_clicked();
+
 private:
     Ui::MainWindow *ui;
     QGraphicsPixmapItem pixmapRow;
@@ -41,6 +43,7 @@ private:
     QGraphicsPixmapItem pixmapThres;
     QGraphicsPixmapItem pixmapPat;
     cv::VideoCapture video;
+    //cv::Mat MatrixCamera;
 };
 
 #endif // MAINWINDOW_H

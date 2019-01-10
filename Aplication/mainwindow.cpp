@@ -118,6 +118,132 @@ void MainWindow::OpenCamera(){
 
 void MainWindow::on_pushButton_clicked()
 {
-
     OpenCamera();
+}
+
+
+void MainWindow::on_btnCalibrate_clicked()
+{
+    bool isCamera = false;
+    bool ok;
+    int nPatternCenters = 12;
+    int ncenters = ui->textnCenters->toPlainText().toInt(&ok);
+    if(ok)
+        nPatternCenters = ncenters;
+    else{
+        ui->plainTextEditLog->appendPlainText("Insert a integer number of Centers\n");
+        return;
+    }
+
+    if(nPatternCenters == 12){
+
+    }
+    QString filename = QFileDialog::getOpenFileName(this, tr("choose"), "", tr("Images (*.avi)"));
+    int cameraIndex = 0; //ui->videoEdit->text().toInt(&isCamera);
+
+    if(isCamera){
+        if(!video.open(cameraIndex)){
+            QMessageBox::critical(this, "Camera error", "Make Sure you entered a correct Camera index");
+            return;
+        }
+    }
+    else{
+        if(!video.open(filename.toStdString())){
+            QMessageBox::critical(this, "Video Error opening", "Make sure you entered a video supported by opencv");
+            return;
+        }
+    }
+    // Video Processing
+    cv::Mat frame;
+    bool keep = true;
+    double acumm = 0.0;
+    unsigned long nframes = 0;
+    unsigned long nfails = 0;
+
+    int idVector[nPatternCenters+20];
+    std::vector<cv::Point> CentersPrev;
+    float szpromEllipse = 1000.0;
+    //Define the bounding box
+    int Xmax = 1000.0;
+    int Ymax = 1000.0;
+    int Xmin = 0.0;
+    int Ymin = 0.0;
+    bool reassign = false;
+    memset(idVector, -1, (nPatternCenters+20)*sizeof (int));
+    int nFramesToCalibrate = 60;
+    int getFrameMultipleBy = 40;
+    std::vector<std::vector<cv::Vec2f>> CentersPatternsToCalibrate;
+    while (CentersPatternsToCalibrate.size() < nFramesToCalibrate) {
+        video>>frame;
+        if(!frame.empty()){
+            nframes++;
+            //if(nframes % 120 == 0){
+                double time = acumm/nframes;
+                ui->labelTime->setText(QString::fromUtf8(std::to_string(time).c_str()));
+                //acumm = 0.0;
+            //}
+            cv::Mat rowFrame, grayRowFrame, blurGaussFrame, thresholdFrame, integralFrame;
+            ProccessImage(frame, grayRowFrame, blurGaussFrame, thresholdFrame, integralFrame, nPatternCenters, idVector, CentersPrev, reassign, acumm, szpromEllipse, Xmax, Ymax, Xmin, Ymin);
+
+            if(CentersPrev.size() != nPatternCenters)
+                nfails++;
+            float accurc = (float)(nframes - nfails)*100.0/(float)nframes;
+            ui->labelAccuracy->setText(QString::fromUtf8(std::to_string(accurc).c_str()));
+            if(!reassign && nframes % getFrameMultipleBy == 0){
+
+                std::vector<cv::Vec2f> centersTemp(0);
+                for(int ppp = 0; ppp < nPatternCenters; ppp++){
+                    centersTemp.push_back(cv::Vec2f((float)CentersPrev[idVector[ppp]].x, (float)CentersPrev[idVector[ppp]].y));
+                }
+                CentersPatternsToCalibrate.push_back(centersTemp);
+                // Draw the ChessBoard!
+                for(int ttt = 0; ttt < centersTemp.size(); ttt++){
+                    cv::putText(frame, std::to_string(ttt), cv::Point(centersTemp[ttt].val[0], centersTemp[ttt].val[1]), 1, 2, cv::Scalar(255, 0, 0), 2, 8);
+                }
+
+                /*for(int m = 0; m < CenterPoints.size(); m++){
+                       cv::putText(rowFrame, std::to_string(m), CenterPoints[idVector[m]], 1, 2, cv::Scalar(255, 0, 0), 2, 8);
+                }*/
+                QImage qimg(frame.data, frame.cols, frame.rows, frame.step, QImage::Format_RGB888);
+                QImage qimgG(blurGaussFrame.data, blurGaussFrame.cols, blurGaussFrame.rows, blurGaussFrame.step, QImage::Format_Grayscale8);
+                QImage qimgT(thresholdFrame.data, thresholdFrame.cols, thresholdFrame.rows, thresholdFrame.step, QImage::Format_Grayscale8);
+                QImage qimgP(integralFrame.data, integralFrame.cols, integralFrame.rows, integralFrame.step, QImage::Format_Grayscale8);
+                //cv::imshow("Fr", frame);
+                pixmapRow.setPixmap(QPixmap::fromImage(qimg.rgbSwapped()));
+                pixmapGauss.setPixmap(QPixmap::fromImage(qimgG.rgbSwapped()));
+                pixmapThres.setPixmap(QPixmap::fromImage(qimgT.rgbSwapped()));
+                pixmapPat.setPixmap(QPixmap::fromImage(qimgP.rgbSwapped()));
+                ui->graphicsView->fitInView(&pixmapRow, Qt::KeepAspectRatio);
+                ui->graphicsViewGauss->fitInView(&pixmapGauss, Qt::KeepAspectRatio);
+                ui->graphicsViewThres->fitInView(&pixmapThres, Qt::KeepAspectRatio);
+                ui->graphicsViewPat->fitInView(&pixmapPat, Qt::KeepAspectRatio);
+            }
+            //ui->graphicsView->scene()->addItem(&pixmap);
+            cv::waitKey(0);
+        }
+        else{
+            keep = false;
+        }
+    }
+    cv::Mat cameraMatrix= cv::Mat::eye(3, 3, CV_64F);
+    for ( int ii=0;ii<3;ii++) {
+        for ( int jj=0; jj<3; jj++) {
+            std::cout<<cameraMatrix.at<double>(ii,jj)<<" ";
+        }
+        std::cout<< std::endl;
+    }
+    cv::Mat distCoeff = cv::Mat::zeros(8, 1, CV_64F);
+
+    std::vector<cv::Mat> rvecs;
+    std::vector<cv::Mat> tvecs;
+    double rms = runCalibrateCamera(CentersPatternsToCalibrate, cv::Size(640, 480), cameraMatrix, distCoeff, rvecs, tvecs, Grid(5,4), 4.8f);
+    std::cout<<"RMS> "<<rms<<std::endl;
+    for ( int ii=0;ii<3;ii++) {
+        for ( int jj=0;jj<3;jj++) {
+            std::cout<<cameraMatrix.at<double>(ii,jj)<<" ";
+        }
+        std::cout<< std::endl;
+    }
+    int x = 21;
+
 }

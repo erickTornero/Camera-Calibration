@@ -246,8 +246,22 @@ bool ComputeCoefficients(const std::vector<cv::Point> & CenterPoints, int widthB
     return true;
 }
 
-void runCalibrateCamera(std::vector<std::vector<cv::Vec3f>> VecImgs, std::vector<std::vector<cv::Vec2f>> vec2, ){
+double runCalibrateCamera(const std::vector<std::vector<cv::Vec2f>> & centersInImage, cv::Size imResolution, cv::Mat & cameraMatrix, cv::Mat & distCoeff, std::vector<cv::Mat>& rvecs, std::vector<cv::Mat>& tvecs, Grid grid, float spaceSize){
+    // Compute the Real Grid Image:
 
+    std::vector<std::vector<cv::Point3f>> pointsRealImage(1);
+    for(int i = 0; i < grid.height; i++){
+        for(int j = 0; j < grid.width; j++){
+            pointsRealImage[0].push_back(cv::Point3d((float)j*spaceSize, (float)i*spaceSize, 0.0f));
+        }
+    }
+
+    // Create many vec as images to calibrate there are
+    pointsRealImage.resize(centersInImage.size(), pointsRealImage[0]);
+    cameraMatrix.at<double>(0,0) = 1.0;
+    double rms = cv::calibrateCamera(pointsRealImage, centersInImage, imResolution, cameraMatrix, distCoeff, rvecs, tvecs, cv::CALIB_FIX_ASPECT_RATIO | cv::CALIB_FIX_K6 | cv::CALIB_RATIONAL_MODEL |cv::CALIB_FIX_K4 | cv::CALIB_FIX_K5);
+
+    return rms;
 }
 
 /*
@@ -635,7 +649,7 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
     //cv::rectangle(rowFrame, cv::Point(Xmin, Ymin), cv::Point(Xmax, Ymax), cv::Scalar(0, 0, 255), 4, 8);
 
     if(allowDraw){
-        for(int k = 0; k < points2.size(); k++){
+        /*for(int k = 0; k < points2.size(); k++){
                     //boundRect[points2[k]] = cv::minAreaRect(cv::Mat(contours[points2[k]]));
                     //if( contours[points2[k]].size() > 5 )
                     //    minEllipse[points2[k]] = cv::fitEllipse( cv::Mat(contours[points2[k]]) );
@@ -643,7 +657,7 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
                     cv::ellipse( rowFrame, minEllipse[points2[k]], cv::Scalar(0,255,0), 2, 8 );
                     //cv::putText(rowFrame, std::to_string(k), CenterPoints[idVector[k]], 1, 2, cv::Scalar(255, 0, 0));
                     // Uncomment bellow to drawBounding boxes
-         }
+        }
         // Draw the ChessBoard!
         if(CenterPoints.size() == nPatternCenters){
             for(int nnr = 0; nnr < grid.height; nnr++){
@@ -657,7 +671,7 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
 
         for(int m = 0; m < CenterPoints.size(); m++){
                cv::putText(rowFrame, std::to_string(m), CenterPoints[idVector[m]], 1, 2, cv::Scalar(255, 0, 0), 2, 8);
-        }
+        }*/
 
     }
     cv::putText(rowFrame, std::to_string(points2.size()), cv::Point(50, 20), 1, 2, cv::Scalar(0, 0, 255), 2, 8);
