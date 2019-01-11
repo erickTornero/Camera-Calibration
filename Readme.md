@@ -46,3 +46,7 @@ Detenction an tracking of pattern with 12 Centers:
 Detenction an tracking of pattern with 20 Centers:
 
 ![alt text](sample2.png)
+
+### Executing Calibration of Camera
+
+![alt text](calibrate.png)

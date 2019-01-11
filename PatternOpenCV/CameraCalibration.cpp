@@ -586,7 +586,7 @@ static bool runCalibration( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat
                                 s.flag | CALIB_USE_LU);
                                 */
         double rms = calibrateCamera(objectPoints, imagePoints, imageSize, cameraMatrix,
-                            distCoeffs, rvecs, tvecs, s.flag|CALIB_USE_LU);                        
+                            distCoeffs, rvecs, tvecs, 0);                        
     }
 
     if (release_object) {

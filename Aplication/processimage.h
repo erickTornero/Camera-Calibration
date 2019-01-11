@@ -245,10 +245,30 @@ bool ComputeCoefficients(const std::vector<cv::Point> & CenterPoints, int widthB
     ComputeBilinearCoeff(X1, Y1, X2, Y2, coefX, coefY, 4);
     return true;
 }
+static double computeReprojectionErrors( const std::vector<std::vector<cv::Point3f> >& objectPoints,
+                                         const std::vector<std::vector<cv::Vec2f> >& imagePoints,
+                                         const std::vector<cv::Mat>& rvecs, const std::vector<cv::Mat>& tvecs,
+                                         const cv::Mat& cameraMatrix , const cv::Mat& distCoeffs,
+                                         std::vector<float>& perViewErrors, bool fisheye)
+{
+    std::vector<cv::Point2f> imagePoints2;
+    size_t totalPoints = 0;
+    double totalErr = 0, err;
+    perViewErrors.resize(objectPoints.size());
+    for(size_t i = 0; i < objectPoints.size(); ++i )
+    {
+        projectPoints(objectPoints[i], rvecs[i], tvecs[i], cameraMatrix, distCoeffs, imagePoints2);
 
+        err = norm(imagePoints[i], imagePoints2, cv::NORM_L2);
+        size_t n = objectPoints[i].size();
+        perViewErrors[i] = (float) std::sqrt(err*err/n);
+        totalErr        += err*err;
+        totalPoints     += n;
+    }
+    return std::sqrt(totalErr/totalPoints);
+}
 double runCalibrateCamera(const std::vector<std::vector<cv::Vec2f>> & centersInImage, cv::Size imResolution, cv::Mat & cameraMatrix, cv::Mat & distCoeff, std::vector<cv::Mat>& rvecs, std::vector<cv::Mat>& tvecs, Grid grid, float spaceSize){
     // Compute the Real Grid Image:
-
     std::vector<std::vector<cv::Point3f>> pointsRealImage(1);
     for(int i = 0; i < grid.height; i++){
         for(int j = 0; j < grid.width; j++){
@@ -258,9 +278,15 @@ double runCalibrateCamera(const std::vector<std::vector<cv::Vec2f>> & centersInI
 
     // Create many vec as images to calibrate there are
     pointsRealImage.resize(centersInImage.size(), pointsRealImage[0]);
-    cameraMatrix.at<double>(0,0) = 1.0;
-    double rms = cv::calibrateCamera(pointsRealImage, centersInImage, imResolution, cameraMatrix, distCoeff, rvecs, tvecs, cv::CALIB_FIX_ASPECT_RATIO | cv::CALIB_FIX_K6 |cv::CALIB_FIX_K4 | cv::CALIB_FIX_K5);
+    //cameraMatrix.at<double>(0,0) = 1.0;
+    //double rms = cv::calibrateCamera(pointsRealImage, centersInImage, imResolution, cameraMatrix, distCoeff, rvecs, tvecs, cv::CALIB_FIX_ASPECT_RATIO | cv::CALIB_RATIONAL_MODEL | cv::CALIB_FIX_PRINCIPAL_POINT | cv::CALIB_ZERO_TANGENT_DIST | cv::CALIB_FIX_K4 | cv::CALIB_FIX_K5);
+    //double rms = cv::calibrateCamera(pointsRealImage, centersInImage, imResolution, cameraMatrix, distCoeff, rvecs, tvecs, cv::CALIB_FIX_PRINCIPAL_POINT | cv::CALIB_ZERO_TANGENT_DIST | cv::CALIB_FIX_ASPECT_RATIO | cv::CALIB_FIX_K4 | cv::CALIB_FIX_K5);
+    double rms = cv::calibrateCamera(pointsRealImage, centersInImage, imResolution, cameraMatrix, distCoeff, rvecs, tvecs, 0);
+    //cameraMatrix = cv::getOptimalNewCameraMatrix(cameraMatrix, distCoeff, imResolution, 1, imResolution, 0);
+    std::vector<float> errorPerview;
 
+    //rms = computeReprojectionErrors(pointsRealImage, centersInImage, rvecs, tvecs, cameraMatrix, distCoeff, errorPerview, false);
+    //rms = cv::calibrateCamera(pointsRealImage, centersInImage, imResolution, cameraMatrix, distCoeff, rvecs, tvecs, cv::CALIB_USE_INTRINSIC_GUESS);
     return rms;
 }
 

@@ -43,7 +43,7 @@ void MainWindow::OpenCamera(){
         ui->plainTextEditLog->appendPlainText("Insert the Grid of Pattern Properly\n");
         return;
     }
-    QString filename = QFileDialog::getOpenFileName(this, tr("choose"), "", tr("Images (*.avi)"));
+    QString filename = QFileDialog::getOpenFileName(this, tr("choose"), "", tr("Images (*.avi *.mp4)"));
     int cameraIndex = 0; //ui->videoEdit->text().toInt(&isCamera);
 
     if(isCamera){
@@ -86,23 +86,33 @@ void MainWindow::OpenCamera(){
             //}
             cv::Mat rowFrame, grayRowFrame, blurGaussFrame, thresholdFrame, integralFrame;
             ProccessImage(frame, grayRowFrame, blurGaussFrame, thresholdFrame, integralFrame, nPatternCenters, idVector, CentersPrev, reassign, acumm, szpromEllipse, Xmax, Ymax, Xmin, Ymin);
+            if(calibrated){
+                cv::Mat temp = frame.clone();
+                cv::Mat frontoPL;
+                cv::undistort(temp, frontoPL, MatrixCamera, DistCoeff);
+                QImage qimgFP(frontoPL.data, frontoPL.cols, frontoPL.rows, frontoPL.step, QImage::Format_RGB888);
+                pixmapThres.setPixmap(QPixmap::fromImage(qimgFP.rgbSwapped()));
+                ui->graphicsViewThres->fitInView(&pixmapThres, Qt::KeepAspectRatio);
+            }
+
             QImage qimg(frame.data, frame.cols, frame.rows, frame.step, QImage::Format_RGB888);
             QImage qimgG(blurGaussFrame.data, blurGaussFrame.cols, blurGaussFrame.rows, blurGaussFrame.step, QImage::Format_Grayscale8);
-            QImage qimgT(thresholdFrame.data, thresholdFrame.cols, thresholdFrame.rows, thresholdFrame.step, QImage::Format_Grayscale8);
+            //QImage qimgT(thresholdFrame.data, thresholdFrame.cols, thresholdFrame.rows, thresholdFrame.step, QImage::Format_Grayscale8);
             QImage qimgP(integralFrame.data, integralFrame.cols, integralFrame.rows, integralFrame.step, QImage::Format_Grayscale8);
             //cv::imshow("Fr", frame);
             pixmapRow.setPixmap(QPixmap::fromImage(qimg.rgbSwapped()));
             pixmapGauss.setPixmap(QPixmap::fromImage(qimgG.rgbSwapped()));
-            pixmapThres.setPixmap(QPixmap::fromImage(qimgT.rgbSwapped()));
+            //pixmapThres.setPixmap(QPixmap::fromImage(qimgT.rgbSwapped()));
             pixmapPat.setPixmap(QPixmap::fromImage(qimgP.rgbSwapped()));
             ui->graphicsView->fitInView(&pixmapRow, Qt::KeepAspectRatio);
             ui->graphicsViewGauss->fitInView(&pixmapGauss, Qt::KeepAspectRatio);
-            ui->graphicsViewThres->fitInView(&pixmapThres, Qt::KeepAspectRatio);
+            //ui->graphicsViewThres->fitInView(&pixmapThres, Qt::KeepAspectRatio);
             ui->graphicsViewPat->fitInView(&pixmapPat, Qt::KeepAspectRatio);
             if(CentersPrev.size() != nPatternCenters)
                 nfails++;
             float accurc = (float)(nframes - nfails)*100.0/(float)nframes;
             ui->labelAccuracy->setText(QString::fromUtf8(std::to_string(accurc).c_str()));
+
             //ui->graphicsView->scene()->addItem(&pixmap);
             cv::waitKey(0);
         }
@@ -131,7 +141,7 @@ void MainWindow::on_btnCalibrate_clicked()
     float spaceValGrid =  float(ui->doubleSpinBoxSpaceCenters->value());
 
     int nFramesToCalibrate = 60;
-    int getFrameMultipleBy = 40;
+    int getFrameMultipleBy = 50;
 
     nFramesToCalibrate = ui->spinBoxPatternsToCalibrate->value();
 
@@ -139,7 +149,7 @@ void MainWindow::on_btnCalibrate_clicked()
         ui->plainTextEditLog->appendPlainText(QString("Set Calibration parameters!!"));
         return;
     }
-    QString filename = QFileDialog::getOpenFileName(this, tr("choose"), "", tr("Images (*.avi)"));
+    QString filename = QFileDialog::getOpenFileName(this, tr("choose"), "", tr("Images (*.avi *mp4)"));
     int cameraIndex = 0; //ui->videoEdit->text().toInt(&isCamera);
 
     if(isCamera){
@@ -236,7 +246,7 @@ void MainWindow::on_btnCalibrate_clicked()
             ui->plainTextEditLog->appendPlainText(QString(" - Calibrating ...!"));
     }
 
-    cv::Mat cameraMatrix= cv::Mat::eye(3, 3, CV_64F);
+    cv::Mat cameraMatrix = cv::Mat::eye(3, 3, CV_64F);
 
     cv::Mat distCoeff = cv::Mat::zeros(8, 1, CV_64F);
 
@@ -252,6 +262,10 @@ void MainWindow::on_btnCalibrate_clicked()
     ui->plainTextEditLog->appendPlainText(QString("Fy = ") + QString::number(cameraMatrix.at<double>(1,1)));
     ui->plainTextEditLog->appendPlainText(QString("Cx = ") + QString::number(cameraMatrix.at<double>(0,2)));
     ui->plainTextEditLog->appendPlainText(QString("Cy = ") + QString::number(cameraMatrix.at<double>(1,2)));
+
+    MatrixCamera = cameraMatrix;
+    DistCoeff = distCoeff;
+    calibrated = true;
     /*std::cout<<"RMS> "<<rms<<std::endl;
     for ( int ii=0;ii<3;ii++) {
         for ( int jj=0;jj<3;jj++) {

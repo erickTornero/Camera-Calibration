@@ -43,7 +43,9 @@ private:
     QGraphicsPixmapItem pixmapThres;
     QGraphicsPixmapItem pixmapPat;
     cv::VideoCapture video;
-    //cv::Mat MatrixCamera;
+    cv::Mat MatrixCamera;
+    cv::Mat DistCoeff;
+    bool calibrated = false;
 };
 
 #endif // MAINWINDOW_H
