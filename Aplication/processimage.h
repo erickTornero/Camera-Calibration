@@ -267,7 +267,10 @@ static double computeReprojectionErrors( const std::vector<std::vector<cv::Point
     }
     return std::sqrt(totalErr/totalPoints);
 }
-double runCalibrateCamera(const std::vector<std::vector<cv::Vec2f>> & centersInImage, cv::Size imResolution, cv::Mat & cameraMatrix, cv::Mat & distCoeff, std::vector<cv::Mat>& rvecs, std::vector<cv::Mat>& tvecs, Grid grid, float spaceSize){
+double RunCalibrateCamera(const std::vector<std::vector<cv::Vec2f>> & centersInImage, cv::Size imResolution, cv::Mat & cameraMatrix, cv::Mat & distCoeff, std::vector<cv::Mat>& rvecs, std::vector<cv::Mat>& tvecs, Grid grid, float spaceSize){
+    /*
+     * First Iteration
+     */
     // Compute the Real Grid Image:
     std::vector<std::vector<cv::Point3f>> pointsRealImage(1);
     for(int i = 0; i < grid.height; i++){
@@ -282,11 +285,7 @@ double runCalibrateCamera(const std::vector<std::vector<cv::Vec2f>> & centersInI
     //double rms = cv::calibrateCamera(pointsRealImage, centersInImage, imResolution, cameraMatrix, distCoeff, rvecs, tvecs, cv::CALIB_FIX_ASPECT_RATIO | cv::CALIB_RATIONAL_MODEL | cv::CALIB_FIX_PRINCIPAL_POINT | cv::CALIB_ZERO_TANGENT_DIST | cv::CALIB_FIX_K4 | cv::CALIB_FIX_K5);
     //double rms = cv::calibrateCamera(pointsRealImage, centersInImage, imResolution, cameraMatrix, distCoeff, rvecs, tvecs, cv::CALIB_FIX_PRINCIPAL_POINT | cv::CALIB_ZERO_TANGENT_DIST | cv::CALIB_FIX_ASPECT_RATIO | cv::CALIB_FIX_K4 | cv::CALIB_FIX_K5);
     double rms = cv::calibrateCamera(pointsRealImage, centersInImage, imResolution, cameraMatrix, distCoeff, rvecs, tvecs, 0);
-    //cameraMatrix = cv::getOptimalNewCameraMatrix(cameraMatrix, distCoeff, imResolution, 1, imResolution, 0);
-    std::vector<float> errorPerview;
 
-    //rms = computeReprojectionErrors(pointsRealImage, centersInImage, rvecs, tvecs, cameraMatrix, distCoeff, errorPerview, false);
-    //rms = cv::calibrateCamera(pointsRealImage, centersInImage, imResolution, cameraMatrix, distCoeff, rvecs, tvecs, cv::CALIB_USE_INTRINSIC_GUESS);
     return rms;
 }
 
@@ -702,6 +701,149 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
     }
     cv::putText(rowFrame, std::to_string(points2.size()), cv::Point(50, 20), 1, 2, cv::Scalar(0, 0, 255), 2, 8);
 
+}
+
+bool GetCenterPoints(cv::Mat & frame, int nPatternCenters, std::vector<cv::Point2f> & Centers){
+    cv::Mat grayRowFrame, blurGaussFrame, thresholdFrame, integralFrame;
+    cv::Mat rowFrame = frame.clone();
+    int idVector[nPatternCenters + 20];
+    memset(idVector, -1, (nPatternCenters+20)*sizeof (int));
+    float szpromEllipse = 1000.0;
+    std::vector<cv::Point> CentersPrev;
+    //Define the bounding box
+    int Xmax = 1000.0;
+    int Ymax = 1000.0;
+    int Xmin = 0.0;
+    int Ymin = 0.0;
+    bool reassign = true;
+    double acumm = 0.0;
+    Centers.clear();
+    ProccessImage(rowFrame, grayRowFrame, blurGaussFrame, thresholdFrame, integralFrame, nPatternCenters, idVector, CentersPrev, reassign, acumm, szpromEllipse, Xmax, Ymax, Xmin, Ymin);
+
+    for(int ppp = 0; ppp < CentersPrev.size(); ppp++){
+        Centers.push_back(cv::Point2f((float)CentersPrev[idVector[ppp]].x, (float)CentersPrev[idVector[ppp]].y));
+    }
+    if(Centers.size() == nPatternCenters && !reassign)
+        return true;
+    else
+        return false;
+}
+
+std::vector<std::vector<cv::Vec2f>> GetRectifiedCenters(const std::vector<cv::Mat> & frames, cv::Size ImResolution, const std::vector<std::vector<cv::Vec2f>> & CentersInImage, const cv::Mat & cameraMatrix, const cv::Mat & distCoeff, const std::vector<cv::Mat>& rvecs, const std::vector<cv::Mat>& tvecs, const Grid grid, float spaceSize, int nPatternCenters){
+    std::vector<std::vector<cv::Vec2f>> OutPoints(0);
+    std::vector<cv::Point3f> pointsRealImage;
+    float screenSpace = float(ImResolution.width)/float(grid.width);
+    screenSpace = screenSpace < float(ImResolution.height)/float(grid.height)? screenSpace: float(ImResolution.height)/float(grid.height);
+    for(int i = 0; i < grid.height; i++){
+        for(int j = 0; j < grid.width; j++){
+            pointsRealImage.push_back(cv::Point3f(float(j*screenSpace + screenSpace/2), float(i*screenSpace + screenSpace/2), 0.0f));
+        }
+    }
+
+    /*
+     * Iterate over selected frames
+     */
+    for(int i = 0; i < frames.size(); i++){
+        /*
+         * Undistort Frame
+         */
+
+        cv::Mat UndistortedImage;
+        std::vector<cv::Point2f> UndistortedCenters;
+        cv::undistort(frames[i], UndistortedImage, cameraMatrix, distCoeff);
+        if(GetCenterPoints(UndistortedImage, nPatternCenters, UndistortedCenters)){
+            cv::Mat homography = cv::findHomography(UndistortedCenters, pointsRealImage);
+            cv::Mat inv_homography = cv::findHomography(pointsRealImage, UndistortedCenters);
+            cv::Mat FrontoParallelUndistorted = UndistortedImage.clone();
+            cv::warpPerspective(UndistortedImage, FrontoParallelUndistorted, homography, ImResolution);
+            std::string namex = "fronto";
+            namex.append(std::to_string(i+1));
+            namex.append(".png");
+            cv::imwrite(namex, FrontoParallelUndistorted);
+            std::vector<cv::Point2f> FrontoParallelCenters;
+            if(GetCenterPoints(FrontoParallelUndistorted, nPatternCenters, FrontoParallelCenters)){
+                std::vector<cv::Point2f> canonical;
+                // Refinement ideal
+                for(int tt = 0; tt < nPatternCenters; tt++){
+                    canonical.push_back(cv::Point2f((pointsRealImage[tt].x + FrontoParallelCenters[tt].x)/2.0, (pointsRealImage[tt].y + FrontoParallelCenters[tt].y)/2.0));
+                }
+                std::vector<cv::Point2f> pointreprojected(nPatternCenters);
+                cv::perspectiveTransform(canonical, pointreprojected, inv_homography);
+                // Refinement Points, use dis points reprojected and the undistort points.
+                for(int tt = 0; tt < pointreprojected.size(); tt++){
+                    pointreprojected[tt].x = 0.5 * UndistortedCenters[tt].x + 0.5 * pointreprojected[tt].x;
+                    pointreprojected[tt].y = 0.5 * UndistortedCenters[tt].y + 0.5 * pointreprojected[tt].y;
+                }
+                std::vector<cv::Vec2f> distortedReprojectedPoints(nPatternCenters);
+                // Distort each Point Reprojected with no distortion
+                double fx = cameraMatrix.at<double>(0,0);
+                double fy = cameraMatrix.at<double>(1, 1);
+                double cx = cameraMatrix.at<double>(0, 2);
+                double cy = cameraMatrix.at<double>(1, 2);
+                double k1 = distCoeff.at<double>(0, 0);
+                double k2 = distCoeff.at<double>(0, 1);
+                double p1 = distCoeff.at<double>(0, 2);
+                double p2 = distCoeff.at<double>(0, 3);
+                double k3 = distCoeff.at<double>(0, 4);
+
+                double xx;
+                double yy;
+                double r2;
+                double xDistort;
+                double yDistort;
+                for(int tt = 0; tt < pointreprojected.size(); tt++){
+                    xx = (pointreprojected[tt].x - cx) / fx;
+                    yy = (pointreprojected[tt].y - cy) / fy;
+                    r2 = xx * xx + yy * yy;
+
+                    // Radial distorsion
+                    xDistort = xx * (1 + k1 * r2 + k2 * pow(r2, 2) + k3 * pow(r2, 3));
+                    yDistort = yy * (1 + k1 * r2 + k2 * pow(r2, 2) + k3 * pow(r2, 3));
+
+                    // Tangential distorsion
+                    xDistort = xDistort + (2 * p1 * xx * yy + p2 * (r2 + 2 * xx * xx));
+                    yDistort = yDistort + (p1 * (r2 + 2 * yy * yy) + 2 * p2 * xx * yy);
+
+                    xDistort = xDistort * fx + cx;
+                    yDistort = yDistort * fy + cy;
+                    distortedReprojectedPoints[tt] = cv::Vec2f(xDistort, yDistort);
+                }
+                // Finis distorting points
+                OutPoints.push_back(distortedReprojectedPoints);
+            }
+        }
+    }
+    return OutPoints;
+}
+
+double RunIterativeCameraCalibration(const std::vector<cv::Mat> & frames, const std::vector<std::vector<cv::Vec2f>> & centersInImage, cv::Size imResolution, cv::Mat & cameraMatrix, cv::Mat & distCoeff, std::vector<cv::Mat>& rvecs, std::vector<cv::Mat>& tvecs, Grid grid, float spaceSize, int nIterations, int nPatternCenters, std::string & logComm){
+    cv::Mat cameraMatrixLocal = cv::Mat::eye(3, 3, CV_64F);
+    cv::Mat distCoeffLocal = cv::Mat::zeros(8, 1, CV_64F);
+    std::vector<cv::Mat> rvecsLocal;
+    std::vector<cv::Mat> tvecsLocal;
+
+    double rms_ = RunCalibrateCamera(centersInImage, imResolution, cameraMatrixLocal, distCoeffLocal, rvecsLocal, tvecsLocal, grid, spaceSize);
+    logComm = "Iterations\n0 rms> ";
+    logComm.append(std::to_string(rms_));
+
+    for(int i = 0; i < nIterations; i++){
+        // Recompute Centers
+        std::vector<std::vector<cv::Vec2f>> newCentersInImage = GetRectifiedCenters(frames, imResolution, centersInImage, cameraMatrixLocal, distCoeffLocal, rvecsLocal, tvecsLocal, grid, spaceSize, nPatternCenters);
+        // Init Parameters
+        cameraMatrixLocal = cv::Mat::eye(3, 3, CV_64F);
+        distCoeffLocal = cv::Mat::zeros(8, 1, CV_64F);
+        rvecsLocal.clear();
+        tvecsLocal.clear();
+        rms_ = RunCalibrateCamera(newCentersInImage, imResolution, cameraMatrixLocal, distCoeffLocal, rvecsLocal, tvecsLocal, grid, spaceSize);
+        logComm.append("\n"+std::to_string(i+1)+"rms> "+std::to_string(rms_));
+        std::cout<<"RMS> It - "<<i + 1<<" ->"<<rms_<<std::endl;
+    }
+    cameraMatrix = cameraMatrixLocal;
+    distCoeff = distCoeffLocal;
+    rvecs = rvecsLocal;
+    tvecs = tvecsLocal;
+
+    return rms_;
 }
 
 #endif // PROCESSIMAGE_H

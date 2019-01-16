@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1356</width>
-    <height>842</height>
+    <width>1359</width>
+    <height>914</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -25,7 +25,7 @@
      <rect>
       <x>20</x>
       <y>40</y>
-      <width>431</width>
+      <width>421</width>
       <height>411</height>
      </rect>
     </property>
@@ -64,9 +64,9 @@
    <widget class="QLabel" name="label_2">
     <property name="geometry">
      <rect>
-      <x>1080</x>
+      <x>1030</x>
       <y>10</y>
-      <width>91</width>
+      <width>231</width>
       <height>17</height>
      </rect>
     </property>
@@ -76,23 +76,23 @@
      </font>
     </property>
     <property name="text">
-     <string>Gaussian</string>
+     <string>Gaussian / Fronto-Parallel</string>
     </property>
    </widget>
    <widget class="QGraphicsView" name="graphicsViewGauss">
     <property name="geometry">
      <rect>
-      <x>960</x>
+      <x>950</x>
       <y>40</y>
-      <width>321</width>
-      <height>281</height>
+      <width>381</width>
+      <height>411</height>
      </rect>
     </property>
    </widget>
    <widget class="QGraphicsView" name="graphicsViewThres">
     <property name="geometry">
      <rect>
-      <x>500</x>
+      <x>490</x>
       <y>40</y>
       <width>411</width>
       <height>411</height>
@@ -104,7 +104,7 @@
      <rect>
       <x>640</x>
       <y>20</y>
-      <width>121</width>
+      <width>211</width>
       <height>17</height>
      </rect>
     </property>
@@ -114,15 +114,15 @@
      </font>
     </property>
     <property name="text">
-     <string>Fronto - Parallel</string>
+     <string>Threshold / Undistorted</string>
     </property>
    </widget>
    <widget class="QGraphicsView" name="graphicsViewPat">
     <property name="geometry">
      <rect>
-      <x>940</x>
-      <y>410</y>
-      <width>391</width>
+      <x>950</x>
+      <y>480</y>
+      <width>381</width>
       <height>371</height>
      </rect>
     </property>
@@ -130,9 +130,9 @@
    <widget class="QLabel" name="label_4">
     <property name="geometry">
      <rect>
-      <x>950</x>
-      <y>360</y>
-      <width>191</width>
+      <x>1090</x>
+      <y>450</y>
+      <width>71</width>
       <height>20</height>
      </rect>
     </property>
@@ -581,7 +581,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1356</width>
+     <width>1359</width>
      <height>22</height>
     </rect>
    </property>

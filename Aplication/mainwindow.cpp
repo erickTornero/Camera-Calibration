@@ -185,7 +185,7 @@ void MainWindow::on_btnCalibrate_clicked()
     ui->progressBarCalibrate->setMaximum(nFramesToCalibrate + 1);
     ui->progressBarCalibrate->setValue(0);
     std::vector<std::vector<cv::Vec2f>> CentersPatternsToCalibrate;
-
+    std::vector<cv::Mat> framesCalibration;
     cv::Size frameSize;
     ui->plainTextEditLog->appendPlainText(QString(" - Loading Centers to Calibrate ...!"));
     while (CentersPatternsToCalibrate.size() < nFramesToCalibrate) {
@@ -200,6 +200,7 @@ void MainWindow::on_btnCalibrate_clicked()
                 //acumm = 0.0;
             //}
             cv::Mat rowFrame, grayRowFrame, blurGaussFrame, thresholdFrame, integralFrame;
+            rowFrame = frame.clone();
             ProccessImage(frame, grayRowFrame, blurGaussFrame, thresholdFrame, integralFrame, nPatternCenters, idVector, CentersPrev, reassign, acumm, szpromEllipse, Xmax, Ymax, Xmin, Ymin);
 
             if(CentersPrev.size() != nPatternCenters)
@@ -208,6 +209,8 @@ void MainWindow::on_btnCalibrate_clicked()
             ui->labelAccuracy->setText(QString::fromUtf8(std::to_string(accurc).c_str()));
             if(!reassign && nframes % getFrameMultipleBy == 0){
 
+                framesCalibration.push_back(rowFrame);
+                cv::imwrite("im2.png", rowFrame);
                 std::vector<cv::Vec2f> centersTemp(0);
                 for(int ppp = 0; ppp < nPatternCenters; ppp++){
                     centersTemp.push_back(cv::Vec2f((float)CentersPrev[idVector[ppp]].x, (float)CentersPrev[idVector[ppp]].y));
@@ -253,9 +256,11 @@ void MainWindow::on_btnCalibrate_clicked()
     std::vector<cv::Mat> rvecs;
     std::vector<cv::Mat> tvecs;
 
-    double rms = runCalibrateCamera(CentersPatternsToCalibrate, frameSize, cameraMatrix, distCoeff, rvecs, tvecs, grid, spaceValGrid);
+    std::string logComm;
+    double rms = RunIterativeCameraCalibration(framesCalibration, CentersPatternsToCalibrate, frameSize, cameraMatrix, distCoeff, rvecs, tvecs, grid, spaceValGrid, 5, nPatternCenters, logComm);
+    //double rms = RunCalibrateCamera(CentersPatternsToCalibrate, frameSize, cameraMatrix, distCoeff, rvecs, tvecs, grid, spaceValGrid);
     ui->progressBarCalibrate->setValue(nFramesToCalibrate + 1);
-
+    ui->plainTextEditLog->appendPlainText(QString(logComm.c_str()));
     ui->plainTextEditLog->appendPlainText(QString(" - Parameters Obtained Successfully!\n"));
     ui->plainTextEditLog->appendPlainText(QString("RMS = ") + QString::number(rms) + QString("\n"));
     ui->plainTextEditLog->appendPlainText(QString("Fx = ") + QString::number(cameraMatrix.at<double>(0,0)));
@@ -265,6 +270,8 @@ void MainWindow::on_btnCalibrate_clicked()
 
     MatrixCamera = cameraMatrix;
     DistCoeff = distCoeff;
+    RVecs = rvecs;
+    TVecs = tvecs;
     calibrated = true;
     /*std::cout<<"RMS> "<<rms<<std::endl;
     for ( int ii=0;ii<3;ii++) {

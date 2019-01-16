@@ -45,6 +45,8 @@ private:
     cv::VideoCapture video;
     cv::Mat MatrixCamera;
     cv::Mat DistCoeff;
+    std::vector<cv::Mat> RVecs;
+    std::vector<cv::Mat> TVecs;
     bool calibrated = false;
 };
 
