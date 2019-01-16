@@ -50,3 +50,7 @@ Detenction an tracking of pattern with 20 Centers:
 ### Executing Calibration of Camera
 
 ![alt text](calibrate.png)
+
+### Fronto paralell
+
+![alt text](frontoparallel.png)
