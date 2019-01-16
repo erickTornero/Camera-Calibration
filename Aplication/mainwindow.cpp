@@ -58,6 +58,16 @@ void MainWindow::OpenCamera(){
             return;
         }
     }
+    std::vector<cv::Point3f> pointsRealImage;
+    if(calibrated){
+        float screenSpace = float(video.get(cv::CAP_PROP_FRAME_WIDTH))/float(grid.width);
+        screenSpace = screenSpace < float(video.get(cv::CAP_PROP_FRAME_HEIGHT))/float(grid.height)? screenSpace: float(video.get(cv::CAP_PROP_FRAME_HEIGHT))/float(grid.height);
+        for(int i = 0; i < grid.height; i++){
+            for(int j = 0; j < grid.width; j++){
+                pointsRealImage.push_back(cv::Point3f(float(j*screenSpace + screenSpace/2), float(i*screenSpace + screenSpace/2), 0.0f));
+            }
+        }
+    }
     // Video Processing
     cv::Mat frame;
     bool keep = true;
@@ -73,12 +83,15 @@ void MainWindow::OpenCamera(){
     int Ymax = 1000.0;
     int Xmin = 0.0;
     int Ymin = 0.0;
-    bool reassign = false;
+    bool reassign = true;
     memset(idVector, -1, (nPatternCenters+20)*sizeof (int));
+    cv::Size frameSize;
     while (keep) {
         video>>frame;
         if(!frame.empty()){
             nframes++;
+            if(nframes == 0)
+                frameSize = frame.size();
             //if(nframes % 120 == 0){
                 double time = acumm/nframes;
                 ui->labelTime->setText(QString::fromUtf8(std::to_string(time).c_str()));
@@ -93,6 +106,7 @@ void MainWindow::OpenCamera(){
                 QImage qimgFP(frontoPL.data, frontoPL.cols, frontoPL.rows, frontoPL.step, QImage::Format_RGB888);
                 pixmapThres.setPixmap(QPixmap::fromImage(qimgFP.rgbSwapped()));
                 ui->graphicsViewThres->fitInView(&pixmapThres, Qt::KeepAspectRatio);
+
             }
 
             QImage qimg(frame.data, frame.cols, frame.rows, frame.step, QImage::Format_RGB888);
@@ -105,7 +119,22 @@ void MainWindow::OpenCamera(){
             //pixmapThres.setPixmap(QPixmap::fromImage(qimgT.rgbSwapped()));
             pixmapPat.setPixmap(QPixmap::fromImage(qimgP.rgbSwapped()));
             ui->graphicsView->fitInView(&pixmapRow, Qt::KeepAspectRatio);
-            ui->graphicsViewGauss->fitInView(&pixmapGauss, Qt::KeepAspectRatio);
+            if(calibrated && CentersPrev.size() == nPatternCenters && !reassign){
+                std::vector<cv::Point2f> centersOrd(nPatternCenters);
+                for(int tt = 0; tt < nPatternCenters; tt++){
+                    centersOrd[tt] = cv::Point2f(float(CentersPrev[idVector[tt]].x), float(CentersPrev[idVector[tt]].y));
+                }
+                cv::Mat homography = cv::findHomography(centersOrd, pointsRealImage);
+                cv::Mat inImage = frame.clone();
+                cv::Mat FrontParImg = frame.clone();
+                cv::warpPerspective(inImage, FrontParImg, homography, frameSize);
+                QImage qimgPers(FrontParImg.data, FrontParImg.cols, FrontParImg.rows, FrontParImg.step, QImage::Format_RGB888);
+                pixmapGauss.setPixmap(QPixmap::fromImage(qimgPers.rgbSwapped()));
+                ui->graphicsViewGauss->fitInView(&pixmapGauss, Qt::KeepAspectRatio);
+
+            }
+            else
+                ui->graphicsViewGauss->fitInView(&pixmapGauss, Qt::KeepAspectRatio);
             //ui->graphicsViewThres->fitInView(&pixmapThres, Qt::KeepAspectRatio);
             ui->graphicsViewPat->fitInView(&pixmapPat, Qt::KeepAspectRatio);
             if(CentersPrev.size() != nPatternCenters)
