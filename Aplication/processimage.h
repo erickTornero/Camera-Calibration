@@ -10,6 +10,8 @@
 //# include "IntegrarThreshold.hpp"
 # include "bilinealtransform.h"
 #include <limits.h>
+bool GetCenterPoints(cv::Mat & frame, int nPatternCenters, std::vector<cv::Point2f> & Centers);
+
 void thresholdIntegral(cv::Mat &inputMat, cv::Mat &outputMat)
 {
     // accept only char type matrices
@@ -667,12 +669,12 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
         if(!reassign)
             allowDraw = true;
     }
+
     CentersPrev = CenterPoints;
     auto t2 = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count();
     acumTime += (double)duration;
     //cv::rectangle(rowFrame, cv::Point(Xmin, Ymin), cv::Point(Xmax, Ymax), cv::Scalar(0, 0, 255), 4, 8);
-
     if(allowDraw){
         for(int k = 0; k < points2.size(); k++){
                     //boundRect[points2[k]] = cv::minAreaRect(cv::Mat(contours[points2[k]]));
@@ -702,8 +704,30 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
     cv::putText(rowFrame, std::to_string(points2.size()), cv::Point(50, 20), 1, 2, cv::Scalar(0, 0, 255), 2, 8);
 
 }
+// Compute Fronto Parallel
+bool ComputeFrontoParallel(cv::Mat & frame, cv::Mat & cameraMatrix, const cv::Mat & distCoeff, cv::Size ImResolution, int nPatternCenters, Grid grid, cv::Mat & FrontoParallelUndistortedOut){
+    std::vector<std::vector<cv::Vec2f>> OutPoints(0);
+    std::vector<cv::Point3f> pointsRealImage;
+    float screenSpace = float(ImResolution.width)/float(grid.width);
+    screenSpace = screenSpace < float(ImResolution.height)/float(grid.height)? screenSpace: float(ImResolution.height)/float(grid.height);
+    for(int i = 0; i < grid.height; i++){
+        for(int j = 0; j < grid.width; j++){
+            pointsRealImage.push_back(cv::Point3f(float(j*screenSpace + screenSpace/2), float(i*screenSpace + screenSpace/2), 0.0f));
+        }
+    }
+    cv::Mat UndistortedImage;
+    std::vector<cv::Point2f> UndistortedCenters;
+    cv::undistort(frame, UndistortedImage, cameraMatrix, distCoeff);
+    if(GetCenterPoints(UndistortedImage, nPatternCenters, UndistortedCenters)){
+        cv::Mat homography = cv::findHomography(UndistortedCenters, pointsRealImage);
+        FrontoParallelUndistortedOut = UndistortedImage.clone();
+        cv::warpPerspective(UndistortedImage, FrontoParallelUndistortedOut, homography, ImResolution);
+        return true;
+    }
+    return false;
+}
 
-// For calibration
+// For Camera calibration
 bool GetCenterPoints(cv::Mat & frame, int nPatternCenters, std::vector<cv::Point2f> & Centers){
     cv::Mat grayRowFrame, blurGaussFrame, thresholdFrame, integralFrame;
     cv::Mat rowFrame = frame.clone();

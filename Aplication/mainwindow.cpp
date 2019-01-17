@@ -89,15 +89,16 @@ void MainWindow::OpenCamera(){
     while (keep) {
         video>>frame;
         if(!frame.empty()){
-            nframes++;
             if(nframes == 0)
                 frameSize = frame.size();
+            nframes++;
             //if(nframes % 120 == 0){
                 double time = acumm/nframes;
                 ui->labelTime->setText(QString::fromUtf8(std::to_string(time).c_str()));
                 //acumm = 0.0;
             //}
             cv::Mat rowFrame, grayRowFrame, blurGaussFrame, thresholdFrame, integralFrame;
+            rowFrame = frame.clone();
             ProccessImage(frame, grayRowFrame, blurGaussFrame, thresholdFrame, integralFrame, nPatternCenters, idVector, CentersPrev, reassign, acumm, szpromEllipse, Xmax, Ymax, Xmin, Ymin);
             if(calibrated){
                 cv::Mat temp = frame.clone();
@@ -125,14 +126,14 @@ void MainWindow::OpenCamera(){
             pixmapPat.setPixmap(QPixmap::fromImage(qimgP.rgbSwapped()));
             ui->graphicsView->fitInView(&pixmapRow, Qt::KeepAspectRatio);
             if(calibrated && CentersPrev.size() == nPatternCenters && !reassign){
-                std::vector<cv::Point2f> centersOrd(nPatternCenters);
-                for(int tt = 0; tt < nPatternCenters; tt++){
-                    centersOrd[tt] = cv::Point2f(float(CentersPrev[idVector[tt]].x), float(CentersPrev[idVector[tt]].y));
-                }
-                cv::Mat homography = cv::findHomography(centersOrd, pointsRealImage);
-                cv::Mat inImage = frame.clone();
-                cv::Mat FrontParImg = frame.clone();
-                cv::warpPerspective(inImage, FrontParImg, homography, frameSize);
+                //std::vector<cv::Point2f> centersOrd(nPatternCenters);
+                //for(int tt = 0; tt < nPatternCenters; tt++){
+                //    centersOrd[tt] = cv::Point2f(float(CentersPrev[idVector[tt]].x), float(CentersPrev[idVector[tt]].y));
+                //}
+                //cv::Mat homography = cv::findHomography(centersOrd, pointsRealImage);
+                cv::Mat FrontParImg;
+                ComputeFrontoParallel(rowFrame, MatrixCamera, DistCoeff, frameSize, nPatternCenters, grid, FrontParImg);
+                //cv::warpPerspective(inImage, FrontParImg, homography, frameSize);
                 QImage qimgPers(FrontParImg.data, FrontParImg.cols, FrontParImg.rows, FrontParImg.step, QImage::Format_RGB888);
                 pixmapGauss.setPixmap(QPixmap::fromImage(qimgPers.rgbSwapped()));
                 ui->graphicsViewGauss->fitInView(&pixmapGauss, Qt::KeepAspectRatio);
