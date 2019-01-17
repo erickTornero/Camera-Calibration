@@ -133,6 +133,12 @@ void MainWindow::OpenCamera(){
                 cv::Mat FrontParImg;
                 if(ComputeFrontoParallel(rowFrame, MatrixCamera, DistCoeff, frameSize, nPatternCenters, grid, FrontParImg)){
                     frontoImg = FrontParImg.clone();
+                    std::vector<cv::Point2f> FrontoParallelCenters;
+                    if(GetCenterPoints(FrontParImg, nPatternCenters, FrontoParallelCenters)){
+                        for(int ttt = 0; ttt < nPatternCenters; ttt++){
+                            cv::circle(FrontParImg, cv::Point(int(FrontoParallelCenters[ttt].x), int(FrontoParallelCenters[ttt].y)), 4, cv::Scalar(0,255,255), 4, 8);
+                        }
+                    }
                 }
                 //cv::warpPerspective(inImage, FrontParImg, homography, frameSize);
                 QImage qimgPers(FrontParImg.data, FrontParImg.cols, FrontParImg.rows, FrontParImg.step, QImage::Format_RGB888);

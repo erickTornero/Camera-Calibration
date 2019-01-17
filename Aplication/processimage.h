@@ -708,8 +708,7 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
 bool ComputeFrontoParallel(cv::Mat & frame, cv::Mat & cameraMatrix, const cv::Mat & distCoeff, cv::Size ImResolution, int nPatternCenters, Grid grid, cv::Mat & FrontoParallelUndistortedOut){
     std::vector<std::vector<cv::Vec2f>> OutPoints(0);
     std::vector<cv::Point3f> pointsRealImage;
-    float screenSpace = float(ImResolution.width)/float(grid.width);
-    screenSpace = screenSpace < float(ImResolution.height)/float(grid.height)? screenSpace: float(ImResolution.height)/float(grid.height);
+    float screenSpace = 50;
     for(int i = 0; i < grid.height; i++){
         for(int j = 0; j < grid.width; j++){
             pointsRealImage.push_back(cv::Point3f(float(j*screenSpace + screenSpace/2), float(i*screenSpace + screenSpace/2), 0.0f));
@@ -720,8 +719,8 @@ bool ComputeFrontoParallel(cv::Mat & frame, cv::Mat & cameraMatrix, const cv::Ma
     cv::undistort(frame, UndistortedImage, cameraMatrix, distCoeff);
     if(GetCenterPoints(UndistortedImage, nPatternCenters, UndistortedCenters)){
         cv::Mat homography = cv::findHomography(UndistortedCenters, pointsRealImage);
-        FrontoParallelUndistortedOut = UndistortedImage.clone();
-        cv::warpPerspective(UndistortedImage, FrontoParallelUndistortedOut, homography, ImResolution);
+        FrontoParallelUndistortedOut = cv::Mat::zeros(screenSpace * grid.width, screenSpace * grid.height, CV_8UC3);
+        cv::warpPerspective(UndistortedImage, FrontoParallelUndistortedOut, homography, cv::Size(screenSpace * grid.width, screenSpace * grid.height));
         return true;
     }
     return false;
@@ -761,8 +760,14 @@ bool GetCenterPoints(cv::Mat & frame, int nPatternCenters, std::vector<cv::Point
 std::vector<std::vector<cv::Vec2f>> GetRectifiedCenters(const std::vector<cv::Mat> & frames, cv::Size ImResolution, const std::vector<std::vector<cv::Vec2f>> & CentersInImage, const cv::Mat & cameraMatrix, const cv::Mat & distCoeff, const std::vector<cv::Mat>& rvecs, const std::vector<cv::Mat>& tvecs, const Grid grid, float spaceSize, int nPatternCenters){
     std::vector<std::vector<cv::Vec2f>> OutPoints(0);
     std::vector<cv::Point3f> pointsRealImage;
-    float screenSpace = float(ImResolution.width)/float(grid.width);
+    /*float screenSpace = float(ImResolution.width)/float(grid.width);
     screenSpace = screenSpace < float(ImResolution.height)/float(grid.height)? screenSpace: float(ImResolution.height)/float(grid.height);
+    for(int i = 0; i < grid.height; i++){
+        for(int j = 0; j < grid.width; j++){
+            pointsRealImage.push_back(cv::Point3f(float(j*screenSpace + screenSpace/2), float(i*screenSpace + screenSpace/2), 0.0f));
+        }
+    }*/
+    float screenSpace = 50;
     for(int i = 0; i < grid.height; i++){
         for(int j = 0; j < grid.width; j++){
             pointsRealImage.push_back(cv::Point3f(float(j*screenSpace + screenSpace/2), float(i*screenSpace + screenSpace/2), 0.0f));
@@ -783,8 +788,8 @@ std::vector<std::vector<cv::Vec2f>> GetRectifiedCenters(const std::vector<cv::Ma
         if(GetCenterPoints(UndistortedImage, nPatternCenters, UndistortedCenters)){
             cv::Mat homography = cv::findHomography(UndistortedCenters, pointsRealImage);
             cv::Mat inv_homography = cv::findHomography(pointsRealImage, UndistortedCenters);
-            cv::Mat FrontoParallelUndistorted = UndistortedImage.clone();
-            cv::warpPerspective(UndistortedImage, FrontoParallelUndistorted, homography, ImResolution);
+            cv::Mat FrontoParallelUndistorted = cv::Mat::zeros(screenSpace * grid.width, screenSpace * grid.height, CV_8UC3);
+            cv::warpPerspective(UndistortedImage, FrontoParallelUndistorted, homography, cv::Size(screenSpace * grid.width, screenSpace * grid.height));
             std::string namex = "fronto";
             namex.append(std::to_string(i+1));
             namex.append(".png");
@@ -878,8 +883,8 @@ double RunIterativeCameraCalibration(const std::vector<cv::Mat> & frames, const 
         rvecs.push_back(tvecsLocal[ttt].clone());
     }
     double rms_true = rms_;
-    std::cout<<"RMS> It - "<<0<<" ->"<<rms_<<" --diff ->"<<difCenter<<std::endl;
-
+    //std::cout<<"RMS> It - "<<0<<" ->"<<rms_<<" --diff ->"<<difCenter<<std::endl;
+    std::cout<<rms_true<<std::endl;
     for(int i = 0; i < nIterations; i++){
         // Recompute Centers
         std::vector<std::vector<cv::Vec2f>> newCentersInImage = GetRectifiedCenters(frames, imResolution, centersInImage, cameraMatrixLocal, distCoeffLocal, rvecsLocal, tvecsLocal, grid, spaceSize, nPatternCenters);
@@ -916,7 +921,8 @@ double RunIterativeCameraCalibration(const std::vector<cv::Mat> & frames, const 
             rms_true = rms_;
             difCenter = difCenterIt;
         }
-        std::cout<<"RMS> It - "<<i + 1<<" ->"<<rms_<<" --diff ->"<<difCenterIt<<" --CxMat> "<<cameraMatrix.at<double>(0,2)<<std::endl;
+        std::cout<<rms_<<std::endl;
+        //std::cout<<"RMS> It - "<<i + 1<<" ->"<<rms_<<" --diff ->"<<difCenterIt<<" --CxMat> "<<cameraMatrix.at<double>(0,2)<<std::endl;
 
     }
 
