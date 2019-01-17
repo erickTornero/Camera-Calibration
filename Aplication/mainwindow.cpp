@@ -86,6 +86,7 @@ void MainWindow::OpenCamera(){
     bool reassign = true;
     memset(idVector, -1, (nPatternCenters+20)*sizeof (int));
     cv::Size frameSize;
+    cv::Mat frontoImg;
     while (keep) {
         video>>frame;
         if(!frame.empty()){
@@ -132,12 +133,19 @@ void MainWindow::OpenCamera(){
                 //}
                 //cv::Mat homography = cv::findHomography(centersOrd, pointsRealImage);
                 cv::Mat FrontParImg;
-                ComputeFrontoParallel(rowFrame, MatrixCamera, DistCoeff, frameSize, nPatternCenters, grid, FrontParImg);
+                if(ComputeFrontoParallel(rowFrame, MatrixCamera, DistCoeff, frameSize, nPatternCenters, grid, FrontParImg)){
+                    frontoImg = FrontParImg.clone();
+                }
                 //cv::warpPerspective(inImage, FrontParImg, homography, frameSize);
                 QImage qimgPers(FrontParImg.data, FrontParImg.cols, FrontParImg.rows, FrontParImg.step, QImage::Format_RGB888);
                 pixmapGauss.setPixmap(QPixmap::fromImage(qimgPers.rgbSwapped()));
                 ui->graphicsViewGauss->fitInView(&pixmapGauss, Qt::KeepAspectRatio);
 
+            }
+            else if (calibrated) {
+                QImage qimgPers(frontoImg.data, frontoImg.cols, frontoImg.rows, frontoImg.step, QImage::Format_RGB888);
+                pixmapGauss.setPixmap(QPixmap::fromImage(qimgPers.rgbSwapped()));
+                ui->graphicsViewGauss->fitInView(&pixmapGauss, Qt::KeepAspectRatio);
             }
             else
                 ui->graphicsViewGauss->fitInView(&pixmapGauss, Qt::KeepAspectRatio);
