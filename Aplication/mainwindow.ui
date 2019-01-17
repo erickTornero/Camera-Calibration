@@ -102,8 +102,8 @@
    <widget class="QLabel" name="label_3">
     <property name="geometry">
      <rect>
-      <x>640</x>
-      <y>20</y>
+      <x>600</x>
+      <y>10</y>
       <width>211</width>
       <height>17</height>
      </rect>
@@ -130,8 +130,8 @@
    <widget class="QLabel" name="label_4">
     <property name="geometry">
      <rect>
-      <x>1090</x>
-      <y>450</y>
+      <x>1120</x>
+      <y>460</y>
       <width>71</width>
       <height>20</height>
      </rect>
@@ -224,9 +224,9 @@
     <property name="geometry">
      <rect>
       <x>350</x>
-      <y>620</y>
+      <y>570</y>
       <width>171</width>
-      <height>151</height>
+      <height>261</height>
      </rect>
     </property>
    </widget>
@@ -234,7 +234,7 @@
     <property name="geometry">
      <rect>
       <x>410</x>
-      <y>600</y>
+      <y>550</y>
       <width>81</width>
       <height>17</height>
      </rect>
@@ -387,6 +387,9 @@
       <height>31</height>
      </rect>
     </property>
+    <property name="value">
+     <number>5</number>
+    </property>
    </widget>
    <widget class="QSpinBox" name="spinBoxHeightCal">
     <property name="geometry">
@@ -396,6 +399,9 @@
       <width>41</width>
       <height>31</height>
      </rect>
+    </property>
+    <property name="value">
+     <number>4</number>
     </property>
    </widget>
    <widget class="QDoubleSpinBox" name="doubleSpinBoxSpaceCenters">
@@ -411,7 +417,10 @@
      <number>3</number>
     </property>
     <property name="singleStep">
-     <double>0.500000000000000</double>
+     <double>1.000000000000000</double>
+    </property>
+    <property name="value">
+     <double>44.000000000000000</double>
     </property>
    </widget>
    <widget class="QLabel" name="label_11">
@@ -573,6 +582,43 @@
     </property>
     <property name="text">
      <string>h</string>
+    </property>
+   </widget>
+   <widget class="QSpinBox" name="spinBoxIt">
+    <property name="geometry">
+     <rect>
+      <x>280</x>
+      <y>570</y>
+      <width>48</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <property name="maximum">
+     <number>20</number>
+    </property>
+    <property name="value">
+     <number>10</number>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_7">
+    <property name="geometry">
+     <rect>
+      <x>290</x>
+      <y>550</y>
+      <width>31</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Ubuntu Condensed</family>
+      <pointsize>12</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>Iter</string>
     </property>
    </widget>
   </widget>

@@ -108,6 +108,11 @@ void MainWindow::OpenCamera(){
                 ui->graphicsViewThres->fitInView(&pixmapThres, Qt::KeepAspectRatio);
 
             }
+            else {
+                QImage qimgT(thresholdFrame.data, thresholdFrame.cols, thresholdFrame.rows, thresholdFrame.step, QImage::Format_Grayscale8);
+                pixmapThres.setPixmap(QPixmap::fromImage(qimgT.rgbSwapped()));
+                ui->graphicsViewThres->fitInView(&pixmapThres, Qt::KeepAspectRatio);
+            }
 
             QImage qimg(frame.data, frame.cols, frame.rows, frame.step, QImage::Format_RGB888);
             QImage qimgG(blurGaussFrame.data, blurGaussFrame.cols, blurGaussFrame.rows, blurGaussFrame.step, QImage::Format_Grayscale8);
@@ -168,9 +173,11 @@ void MainWindow::on_btnCalibrate_clicked()
     Grid grid(ui->spinBoxWidthCal->value(),ui->spinBoxHeightCal->value());
     nPatternCenters = grid.width*grid.height;
     float spaceValGrid =  float(ui->doubleSpinBoxSpaceCenters->value());
+    int nIterationsCalibration = ui->spinBoxIt->value();
 
     int nFramesToCalibrate = 60;
     int getFrameMultipleBy = 50;
+
 
     nFramesToCalibrate = ui->spinBoxPatternsToCalibrate->value();
 
@@ -286,7 +293,8 @@ void MainWindow::on_btnCalibrate_clicked()
     std::vector<cv::Mat> tvecs;
 
     std::string logComm;
-    double rms = RunIterativeCameraCalibration(framesCalibration, CentersPatternsToCalibrate, frameSize, cameraMatrix, distCoeff, rvecs, tvecs, grid, spaceValGrid, 5, nPatternCenters, logComm);
+
+    double rms = RunIterativeCameraCalibration(framesCalibration, CentersPatternsToCalibrate, frameSize, cameraMatrix, distCoeff, rvecs, tvecs, grid, spaceValGrid, nIterationsCalibration, nPatternCenters, logComm);
     //double rms = RunCalibrateCamera(CentersPatternsToCalibrate, frameSize, cameraMatrix, distCoeff, rvecs, tvecs, grid, spaceValGrid);
     ui->progressBarCalibrate->setValue(nFramesToCalibrate + 1);
     ui->plainTextEditLog->appendPlainText(QString(logComm.c_str()));
@@ -302,6 +310,7 @@ void MainWindow::on_btnCalibrate_clicked()
     RVecs = rvecs;
     TVecs = tvecs;
     calibrated = true;
+
     /*std::cout<<"RMS> "<<rms<<std::endl;
     for ( int ii=0;ii<3;ii++) {
         for ( int jj=0;jj<3;jj++) {
