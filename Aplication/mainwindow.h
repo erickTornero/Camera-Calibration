@@ -25,6 +25,7 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     void OpenCamera();
+    bool SelectFrames(cv::VideoCapture video, std::vector<cv::Mat> & frames, std::vector<std::vector<cv::Vec2f>> & CentersPatternsToCalibrate, cv::Size imResolution, const int numFrames, int nPatternCenters);
     ~MainWindow();
 
 protected:
@@ -32,7 +33,6 @@ protected:
 
 private slots:
     void on_pushButton_clicked();
-    void executeTask();
 
     void on_btnCalibrate_clicked();
 

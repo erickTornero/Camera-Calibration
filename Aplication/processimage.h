@@ -727,6 +727,7 @@ bool ComputeFrontoParallel(cv::Mat & frame, cv::Mat & cameraMatrix, const cv::Ma
     return false;
 }
 
+
 // For Camera calibration
 bool GetCenterPoints(cv::Mat & frame, int nPatternCenters, std::vector<cv::Point2f> & Centers){
     cv::Mat grayRowFrame, blurGaussFrame, thresholdFrame, integralFrame;
@@ -745,11 +746,14 @@ bool GetCenterPoints(cv::Mat & frame, int nPatternCenters, std::vector<cv::Point
     Centers.clear();
     ProccessImage(rowFrame, grayRowFrame, blurGaussFrame, thresholdFrame, integralFrame, nPatternCenters, idVector, CentersPrev, reassign, acumm, szpromEllipse, Xmax, Ymax, Xmin, Ymin);
 
+
     for(int ppp = 0; ppp < CentersPrev.size(); ppp++){
         Centers.push_back(cv::Point2f((float)CentersPrev[idVector[ppp]].x, (float)CentersPrev[idVector[ppp]].y));
     }
-    if(Centers.size() == nPatternCenters && !reassign)
+    if(Centers.size() == nPatternCenters && !reassign){
+        cv::imwrite("imcent.png", frame);
         return true;
+    }
     else
         return false;
 }

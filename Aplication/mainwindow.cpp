@@ -30,9 +30,7 @@ MainWindow::~MainWindow()
 {
     delete ui;
 }
-void MainWindow::executeTask(){
 
-}
 void MainWindow::OpenCamera(){
     bool isCamera = false;
     bool ok;
@@ -227,12 +225,14 @@ void MainWindow::on_btnCalibrate_clicked()
     bool reassign = false;
     memset(idVector, -1, (nPatternCenters+20)*sizeof (int));
 
+
     ui->progressBarCalibrate->setMaximum(nFramesToCalibrate + 1);
     ui->progressBarCalibrate->setValue(0);
     std::vector<std::vector<cv::Vec2f>> CentersPatternsToCalibrate;
     std::vector<cv::Mat> framesCalibration;
-    cv::Size frameSize;
+    cv::Size frameSize = cv::Size(video.get(cv::CAP_PROP_FRAME_WIDTH), video.get(cv::CAP_PROP_FRAME_HEIGHT));
     ui->plainTextEditLog->appendPlainText(QString(" - Loading Centers to Calibrate ...!"));
+
     while (CentersPatternsToCalibrate.size() < nFramesToCalibrate) {
         video>>frame;
         if(!frame.empty()){
@@ -266,9 +266,9 @@ void MainWindow::on_btnCalibrate_clicked()
                 //    cv::putText(frame, std::to_string(ttt), cv::Point(centersTemp[ttt].val[0], centersTemp[ttt].val[1]), 1, 2, cv::Scalar(255, 0, 0), 2, 8);
                 //}
 
-                /*for(int m = 0; m < CenterPoints.size(); m++){
-                       cv::putText(rowFrame, std::to_string(m), CenterPoints[idVector[m]], 1, 2, cv::Scalar(255, 0, 0), 2, 8);
-                }*/
+                //for(int m = 0; m < CenterPoints.size(); m++){
+                //       cv::putText(rowFrame, std::to_string(m), CenterPoints[idVector[m]], 1, 2, cv::Scalar(255, 0, 0), 2, 8);
+                //}
                 QImage qimg(frame.data, frame.cols, frame.rows, frame.step, QImage::Format_RGB888);
                 QImage qimgG(blurGaussFrame.data, blurGaussFrame.cols, blurGaussFrame.rows, blurGaussFrame.step, QImage::Format_Grayscale8);
                 QImage qimgT(thresholdFrame.data, thresholdFrame.cols, thresholdFrame.rows, thresholdFrame.step, QImage::Format_Grayscale8);
@@ -293,6 +293,9 @@ void MainWindow::on_btnCalibrate_clicked()
         if(CentersPatternsToCalibrate.size() == nFramesToCalibrate)
             ui->plainTextEditLog->appendPlainText(QString(" - Calibrating ...!"));
     }
+
+
+    //SelectFrames(video, framesCalibration, CentersPatternsToCalibrate, cv::Size(video.get(cv::CAP_PROP_FRAME_WIDTH), video.get(cv::CAP_PROP_FRAME_HEIGHT)), nFramesToCalibrate, nPatternCenters);
 
     cv::Mat cameraMatrix = cv::Mat::eye(3, 3, CV_64F);
 
@@ -329,4 +332,143 @@ void MainWindow::on_btnCalibrate_clicked()
     }
     int x = 21;
     */
+}
+
+
+// Algorithm to Select Properly Frames:
+// Data structure to do that
+struct GridData{
+    int count;
+    int limit;
+    void setLimit(int l){
+        limit = l;
+    }
+    bool addCounter(){
+        if(count < limit){
+            count++;
+            return true;
+        }
+        return false;
+    }
+    GridData(int c, int l):count(c), limit(l){}
+};
+// Algorithm to select frames in camera calibration
+bool MainWindow::SelectFrames(cv::VideoCapture video, std::vector<cv::Mat> & frames, std::vector<std::vector<cv::Vec2f>> & CentersPatternsToCalibrate, cv::Size imResolution, const int numFrames, int nPatternCenters){
+    // Define the grid
+    // PrintMat = cv::Mat(imResolution, Int);
+    // Warn: This is not the grid of pattern, but for define all the mat.
+    int numCols = 4;
+    int numRows = 3;
+    float gridWidth = float(imResolution.width/numCols);
+    float gridHeight = float(imResolution.height/numRows);
+    int limitPerGrid = numFrames/(numCols*numRows);
+    // Initialize the matrix with 0 as value
+    std::vector<std::vector<GridData>> gridCenters(numRows, std::vector<GridData>(numCols, GridData(0, limitPerGrid)));
+    // Compute residues, add more frames in Center
+    if(numFrames % (numCols*numRows) > 0){
+        int nRepartFrames = numFrames %(numCols*numRows);
+        gridCenters[1][1].setLimit(limitPerGrid + nRepartFrames/2);
+        gridCenters[1][2].setLimit(limitPerGrid + nRepartFrames - nRepartFrames/2);
+    }
+
+    // Read Frames
+    cv::Mat curFrame;
+    cv::Mat RowFrame;
+    std::vector<cv::Point2f> centerpoints;
+    bool canSkip = false;
+    int framesToSkip = 40;
+    int numSkipedFrame = 0;
+
+    bool keepRunning = true;
+    cv::Mat mapCenters = cv::Mat::zeros(imResolution, CV_8UC3);
+    // Draw grids:
+    for(int t = 0; t < numRows - 1; t++){
+        cv::line(mapCenters, cv::Point(0, (t + 1)*int(gridHeight)), cv::Point(imResolution.width, (t + 1)*int(gridHeight)), cv::Scalar(255, 0, 0), 2, 4);
+    }
+    for(int t = 0; t < numCols - 1; t++){
+        cv::line(mapCenters, cv::Point((t + 1)*int(gridWidth), 0), cv::Point((t + 1)*int(gridWidth), imResolution.height), cv::Scalar(255, 0, 0), 2, 4);
+    }
+    while (keepRunning) {
+        video>>curFrame;
+
+        if(!curFrame.empty()){
+            if(!canSkip){
+                RowFrame = curFrame.clone();
+                if(GetCenterPoints(curFrame, nPatternCenters, centerpoints)){
+                    cv::Point2f centerOfGrid((centerpoints[0] + centerpoints[centerpoints.size() - 1])/2.0f);
+                    //cv::Point2f centerTest(34, 50);
+                    int gridPositionX = int(centerOfGrid.x/gridWidth);
+                    int gridPositionY = int(centerOfGrid.y/gridHeight);
+
+                    if(gridCenters[gridPositionY][gridPositionX].addCounter()){
+                        // Test if it is rotated:
+                        cv::RotatedRect rect = cv::minAreaRect(centerpoints);
+                        cv::Point2f rec_points[4];
+                        rect.points(rec_points);
+
+                        /*for(size_t j = 0; j < 4; j++){
+                            cv::line(im, rec_points[j], rec_points[(j+1)%4], cv::Scalar(255,0,0), 4, 8);
+                        }*/
+                        int position[4] = {-1, -1, -1, -1};
+                        //float eps = 20.0;
+                        //int maxnComponents = 20;
+                        //std::vector<std::priority_queue<int>> indexPossible(4);
+
+                        // Get At least 2 diagonal corners, this corners will be corners that have minimal distance with centerPoints (pattern) & corners of minAreaRect given an 'epsilon'
+                        for(int k = 0; k < 4; k++){
+                            cv::Point P1 = rec_points[k];
+                            double minDistance = 1000.0;
+                            for(int i = 0; i < centerpoints.size(); i++){
+                                double distance = cv::norm(cv::Point2f(float(P1.x), float(P1.y)) - centerpoints[i]);
+                                if(distance < minDistance && distance < 10){
+                                    position[k] = i;
+                                    minDistance = distance;
+                                }
+                            }
+                        }
+                        bool isInclined = false;
+                        for(int t = 0; t  < 4; t++){
+                            if(position[t] == -1){
+                                isInclined = true;
+                                break;
+                            }
+                        }
+                        //
+                        // Skip Frames
+                        if(isInclined){
+                            canSkip = true;
+                            frames.push_back(RowFrame);
+                            std::vector<cv::Vec2f> centersTemp(0);
+                            for(int ppp = 0; ppp < nPatternCenters; ppp++){
+                                centersTemp.push_back(cv::Vec2f((float)centerpoints[ppp].x, (float)centerpoints[ppp].y));
+                            }
+                            CentersPatternsToCalibrate.push_back(centersTemp);
+                            if(frames.size() == numFrames)
+                                keepRunning = false;
+
+                            cv::circle(mapCenters, cv::Point(float(centerOfGrid.x), float(centerOfGrid.y)), 4, cv::Scalar(0, 0, 255), 2, 4);
+
+                            QImage qimgPatR(mapCenters.data, mapCenters.cols, mapCenters.rows, mapCenters.step, QImage::Format_RGB888);
+                            pixmapThres.setPixmap(QPixmap::fromImage(qimgPatR.rgbSwapped()));
+                            ui->graphicsViewThres->fitInView(&pixmapThres, Qt::KeepAspectRatio);
+                        }
+                    }
+                }
+            }
+            else{
+                numSkipedFrame++;
+                if(numSkipedFrame >= framesToSkip){
+                    canSkip = false;
+                    numSkipedFrame = 0;
+                }
+            }
+            QImage qimg(curFrame.data, curFrame.cols, curFrame.rows, curFrame.step, QImage::Format_RGB888);
+            pixmapRow.setPixmap(QPixmap::fromImage(qimg.rgbSwapped()));
+            ui->graphicsView->fitInView(&pixmapRow, Qt::KeepAspectRatio);
+        }
+        else{
+            keepRunning = false;
+        }
+        cv::waitKey(0);
+    }
 }
