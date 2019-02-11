@@ -36,7 +36,7 @@ HEADERS += \
 
 FORMS += \
         mainwindow.ui
-LIBS += -fopenmp
+# LIBS += -fopenmp
 
 ## Opencv
 INCLUDEPATH += /usr/local/include/opencv2

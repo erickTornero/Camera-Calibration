@@ -124,7 +124,7 @@ void MainWindow::OpenCamera(){
             //pixmapThres.setPixmap(QPixmap::fromImage(qimgT.rgbSwapped()));
             pixmapPat.setPixmap(QPixmap::fromImage(qimgP.rgbSwapped()));
             ui->graphicsView->fitInView(&pixmapRow, Qt::KeepAspectRatio);
-            if(calibrated && CentersPrev.size() == nPatternCenters && !reassign){
+            if(calibrated && CentersPrev.size() == nPatternCenters){// && !reassign){
                 //std::vector<cv::Point2f> centersOrd(nPatternCenters);
                 //for(int tt = 0; tt < nPatternCenters; tt++){
                 //    centersOrd[tt] = cv::Point2f(float(CentersPrev[idVector[tt]].x), float(CentersPrev[idVector[tt]].y));
@@ -136,7 +136,7 @@ void MainWindow::OpenCamera(){
                     std::vector<cv::Point2f> FrontoParallelCenters;
                     if(GetCenterPoints(FrontParImg, nPatternCenters, FrontoParallelCenters)){
                         for(int ttt = 0; ttt < nPatternCenters; ttt++){
-                            cv::circle(FrontParImg, cv::Point(int(FrontoParallelCenters[ttt].x), int(FrontoParallelCenters[ttt].y)), 4, cv::Scalar(0,255,255), 4, 8);
+                            cv::circle(FrontParImg, cv::Point(int(FrontoParallelCenters[ttt].x), int(FrontoParallelCenters[ttt].y)), 4, cv::Scalar(0,255,255), 2, 2);
                         }
                     }
                 }
