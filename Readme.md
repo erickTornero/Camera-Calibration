@@ -42,6 +42,7 @@ Compile Project running the makefile:
 Calibrating example:
 
 ![](sample_calibration.gif)
+
 Detenction an tracking of pattern with 12 Centers:
 
 ![alt text](https://raw.githubusercontent.com/erickTornero/Camera-Calibration/master/tt2.png)
