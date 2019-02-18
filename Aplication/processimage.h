@@ -15,7 +15,7 @@ struct Grid;
 bool GetCenterPoints(cv::Mat & frame, int nPatternCenters, std::vector<cv::Point2f> & Centers);
 std::vector<cv::Point2f> RecomputeFrontoParallel(std::vector<cv::Point2f>, Grid );
 
-void thresholdIntegral(cv::Mat &inputMat, cv::Mat &outputMat)
+void thresholdIntegral(cv::Mat &inputMat, cv::Mat &outputMat, int factor = 16)
 {
     // accept only char type matrices
     CV_Assert(!inputMat.empty());
@@ -38,7 +38,7 @@ void thresholdIntegral(cv::Mat &inputMat, cv::Mat &outputMat)
     CV_Assert(sumMat.depth() == CV_32S);
     CV_Assert(sizeof(int) == 4);
 
-    int S = MAX(nRows, nCols)/16;
+    int S = MAX(nRows, nCols)/factor;
     //double T = 0.15;
     double T = 0.1;
 
@@ -715,6 +715,77 @@ void ProccessImage(cv::Mat & rowFrame, cv::Mat & grayRowFrame, cv::Mat & blurGau
     cv::putText(rowFrame, std::to_string(points2.size()), cv::Point(50, 20), 1, 2, cv::Scalar(0, 0, 255), 2, 8);
 
 }
+/*
+ *  Find Circles in frontoparallel
+ */
+bool FindCentersInFrontoParallel(cv::Mat & frame, int nPatternCenters, std::vector<cv::Point2f> & Centers, Grid grid){
+    cv::Mat f1 = frame.clone();
+    cv::Mat grayRowFrame, blurGaussFrame, integralFrame;
+    cv::cvtColor(f1, grayRowFrame, CV_RGB2GRAY);
+    //GaussianBlur(grayRowFrame, blurGaussFrame, cv::Size( 3, 3 ), 0, 0 );
+    grayRowFrame.copyTo(integralFrame);
+    thresholdIntegral(grayRowFrame, integralFrame, 2);
+    //std::vector<cv::Vec3f> circles;
+    std::vector<std::vector<cv::Point> > contours;
+    std::vector<cv::Vec4i> hierarchy;
+    cv::findContours(integralFrame, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
+    //cv::HoughCircles(integralFrame, circles, cv::HOUGH_GRADIENT, 1, integralFrame.rows/8, 200, 100, 0, 300);
+    //std::cout<<circles.size()<<std::endl;
+    //std::cout<<contours.size()<<std::endl;
+    std::vector<int> points;    // Store the index of possible contours.
+    /*
+    * [{0,1,2,3}]={next contour (same level), previous contour (same level), child contour, parent contour}
+    */
+    for(int a = 0; a < contours.size(); a++){
+        if((hierarchy[a][2] >= 0 || hierarchy[a][3] >= 0) && contours[a].size() > 5)
+            points.push_back(a);
+    }
+    //std::cout<<"Posible points> "<<points.size()<<std::endl;
+
+
+    std::vector<cv::RotatedRect> minCircles( contours.size() );
+
+    // To Store the Center of each Pattern
+    std::vector<cv::Point> CenterPoints;
+    bool isElipseComputed[contours.size()];
+    memset(isElipseComputed, false, contours.size()*sizeof (bool));
+    std::vector<cv::RotatedRect> minEllipse( contours.size() );
+    double epsilon = 5.0;
+    // Iterate over all possible contours.
+    for(int a = 0; a < points.size(); a++){
+        int poschild = points[a];
+        // [2] == -1 ? means that contour doesn't have child
+        if(hierarchy[poschild][2] == -1 ){
+            // Compute child Ellipse if it is not computed yet.
+            if(!isElipseComputed[poschild] && contours[poschild].size() > 5){
+                minEllipse[poschild] = cv::fitEllipse(cv::Mat(contours[poschild]));
+                isElipseComputed[poschild] = true;
+            }
+            // compute father Ellipse if it is not computed yet.
+            int posfather = hierarchy[points[a]][3];
+            if(!isElipseComputed[posfather] && contours[posfather].size() > 5){
+                minEllipse[posfather] = cv::fitEllipse(cv::Mat(contours[posfather]));
+                isElipseComputed[posfather] = true;
+            }
+            // Heuristic: Is the center of child, near to center of father?
+            double val = cv::norm(minEllipse[poschild].center - minEllipse[posfather].center);
+            if(val < epsilon){
+                CenterPoints.push_back((minEllipse[poschild].center + minEllipse[posfather].center)/2.0);
+            }
+        }
+    }
+    Centers.clear();
+    if(CenterPoints.size() == nPatternCenters){
+        int * idVector = new int[nPatternCenters];
+        cv::Mat xx;
+        ReassingIdx(idVector, CenterPoints, nPatternCenters, xx, 10.0, grid);
+        for(int aa = 0; aa < nPatternCenters; aa++){
+            Centers.push_back(cv::Point2f(float(CenterPoints[idVector[aa]].x), float(CenterPoints[idVector[aa]].y)));
+        }
+        return true;
+    }
+    return false;
+}
 // Compute Fronto Parallel
 bool ComputeFrontoParallel(cv::Mat & frame, cv::Mat & cameraMatrix, const cv::Mat & distCoeff, cv::Size ImResolution, int nPatternCenters, Grid grid, cv::Mat & FrontoParallelUndistortedOut){
     std::vector<std::vector<cv::Vec2f>> OutPoints(0);
@@ -768,7 +839,7 @@ bool GetCenterPoints(cv::Mat & frame, int nPatternCenters, std::vector<cv::Point
         return false;
 }
 
-std::vector<std::vector<cv::Vec2f>> GetRectifiedCenters(std::vector<cv::Mat> & frames, cv::Size ImResolution, std::vector<std::vector<cv::Vec2f>> & CentersInImage, const cv::Mat & cameraMatrix, const cv::Mat & distCoeff, const std::vector<cv::Mat>& rvecs, const std::vector<cv::Mat>& tvecs, const Grid grid, float spaceSize, int nPatternCenters){
+std::vector<std::vector<cv::Vec2f>> GetRectifiedCenters(std::vector<cv::Mat> & frames, cv::Size ImResolution, std::vector<std::vector<cv::Vec2f>> & CentersInImage, const cv::Mat & cameraMatrix, const cv::Mat & distCoeff, std::vector<cv::Mat>& rvecs, std::vector<cv::Mat>& tvecs, const Grid grid, float spaceSize, int nPatternCenters){
     std::vector<std::vector<cv::Vec2f>> OutPoints(0);
     std::vector<cv::Point3f> pointsRealImage;
     /*float screenSpace = float(ImResolution.width)/float(grid.width);
@@ -786,7 +857,8 @@ std::vector<std::vector<cv::Vec2f>> GetRectifiedCenters(std::vector<cv::Mat> & f
     }
     std::vector<cv::Mat> framesLocal;
     std::vector<std::vector<cv::Vec2f>> CentersInImageLocal;
-
+    std::vector<cv::Mat> tvecs_curr;
+    std::vector<cv::Mat> rvecs_curr;
     /*
      * Iterate over selected frames
      */
@@ -803,29 +875,30 @@ std::vector<std::vector<cv::Vec2f>> GetRectifiedCenters(std::vector<cv::Mat> & f
             cv::Mat inv_homography = cv::findHomography(pointsRealImage, UndistortedCenters);
             cv::Mat FrontoParallelUndistorted = cv::Mat::zeros(screenSpace * grid.width, screenSpace * grid.height, CV_8UC3);
             cv::warpPerspective(UndistortedImage, FrontoParallelUndistorted, homography, cv::Size(screenSpace * grid.width, screenSpace * grid.height));
-            std::string namex = "fronto";
+            std::string namex = "Fronto";
             namex.append(std::to_string(i+1));
             namex.append(".png");
             cv::imwrite(namex, FrontoParallelUndistorted);
             std::vector<cv::Point2f> FrontoParallelCentersN;
-            if(GetCenterPoints(FrontoParallelUndistorted, nPatternCenters, FrontoParallelCentersN)){
+            if(FindCentersInFrontoParallel(FrontoParallelUndistorted, nPatternCenters, FrontoParallelCentersN, grid)){
                 std::vector<cv::Point2f> canonical;
                 std::vector<cv::Point2f> FrontoParallelCenters = RecomputeFrontoParallel(FrontoParallelCentersN, grid);
                 // Refinement ideal
                 for(int tt = 0; tt < nPatternCenters; tt++){
                     canonical.push_back(cv::Point2f((pointsRealImage[tt].x + FrontoParallelCenters[tt].x)/2.0, (pointsRealImage[tt].y + FrontoParallelCenters[tt].y)/2.0));
                 }
-                std::vector<cv::Point2f> pointreprojected(nPatternCenters);
+
+                /*std::vector<cv::Point2f> pointreprojected(nPatternCenters);
                 cv::perspectiveTransform(canonical, pointreprojected, inv_homography);
                 // Refinement Points, use dis points reprojected and the undistort points.
                 for(int tt = 0; tt < pointreprojected.size(); tt++){
                     pointreprojected[tt].x = 0.5 * UndistortedCenters[tt].x + 0.5 * pointreprojected[tt].x;
                     pointreprojected[tt].y = 0.5 * UndistortedCenters[tt].y + 0.5 * pointreprojected[tt].y;
-                }
+                }*/
                 std::vector<cv::Vec2f> distortedReprojectedPoints;//(nPatternCenters);
                 // Distort each Point Reprojected with no distortion
                 // This is explanined in the OpenCV camera calibration tutorial
-                std::vector<cv::Point3f> pointreprV(FrontoParallelCenters.size());
+                std::vector<cv::Point3f> pointreprV(canonical.size());
                 for(int tttt = 0; tttt < pointreprV.size(); tttt++)
                     pointreprV[tttt] = cv::Point3f(canonical[tttt].x, canonical[tttt].y, 0.0f);
 
@@ -840,11 +913,11 @@ std::vector<std::vector<cv::Vec2f>> GetRectifiedCenters(std::vector<cv::Mat> & f
                 //double P2 = distCoeff.at<double>(0, 3);
                 //double K3 = distCoeff.at<double>(0, 4);
 
-                double K1 = distCoeff.at<double>(0);
-                double K2 = distCoeff.at<double>(1);
-                double P1 = distCoeff.at<double>(2);
-                double P2 = distCoeff.at<double>(3);
-                double K3 = distCoeff.at<double>(4);
+                double K1 = -distCoeff.at<double>(0);
+                double K2 = -distCoeff.at<double>(1);
+                double P1 = -distCoeff.at<double>(2);
+                double P2 = -distCoeff.at<double>(3);
+                double K3 = -distCoeff.at<double>(4);
 
 
                 double xx;
@@ -869,10 +942,12 @@ std::vector<std::vector<cv::Vec2f>> GetRectifiedCenters(std::vector<cv::Mat> & f
                     Ycorrected = Ycorrected * Fy + Cy;
                     //distortedReprojectedPoints[tt] = cv::Vec2f(Xcorrected, Ycorrected);
                 }*/
+                //std::cout<<"Centers 2 > ("<<CentersInImage[i][2][0]  <<", "<<CentersInImage[i][2][1]<<") \t--> ("<< distortedReprojectedPoints[2][0]<<", "<<distortedReprojectedPoints[2][1]<<")"<<std::endl;
+                //std::cout<<"Centers 11> ("<<CentersInImage[i][11][0] <<", "<<CentersInImage[i][11][1]<<") \t--> ("<<distortedReprojectedPoints[11][0]<<", "<<distortedReprojectedPoints[11][1]<<")"<<std::endl;
                 // Compute the original points
                 //std::vector<cv::Point2f> originalimagepoints;
                 //if(GetCenterPoints(copyFrame, nPatternCenters, originalimagepoints)){
-                    std::vector<cv::Vec2f> ansxx(0);
+                    std::vector<cv::Vec2f> ansxx;
                     for(int aaa = 0; aaa < distortedReprojectedPoints.size(); aaa++)
                         ansxx.push_back(cv::Vec2f(float(distortedReprojectedPoints[aaa][0] + CentersInImage[i][aaa][0])/2.0f, float(distortedReprojectedPoints[aaa][1] + CentersInImage[i][aaa][1])/2.0f));
 
@@ -880,13 +955,22 @@ std::vector<std::vector<cv::Vec2f>> GetRectifiedCenters(std::vector<cv::Mat> & f
                     OutPoints.push_back(ansxx);
                     framesLocal.push_back(frames[i]);
                     CentersInImageLocal.push_back(CentersInImage[i]);
+                    //tvecs_curr.push_back(tvecs[i].clone());
+                    //rvecs_curr.push_back(rvecs[i].clone());
+
                 //}
 
             }
         }
+        else{
+            std::cout<<"Not found"<<std::endl;
+        }
     }
     frames = framesLocal;
     CentersInImage = CentersInImageLocal;
+    //tvecs = tvecs_curr;
+    //rvecs = rvecs_curr;
+
     return OutPoints;
 }
 
@@ -928,12 +1012,16 @@ double RunIterativeCameraCalibration(std::vector<cv::Mat> & frames, std::vector<
         // Recompute Centers
         std::vector<std::vector<cv::Vec2f>> newCentersInImage = GetRectifiedCenters(frames, imResolution, centersInImage, cameraMatrixLocal, distCoeffLocal, rvecsLocal, tvecsLocal, grid, spaceSize, nPatternCenters);
         // Init Parameters
-        // std::cout<< "# New Centers SZ>"<<newCentersInImage.size()<<std::endl;
+        std::cout<< "#Valid Images> "<<newCentersInImage.size()<<std::endl;
         cameraMatrixLocal = cv::Mat::eye(3, 3, CV_64F);
         cameraMatrixLocal.at<double>(0, 0) = 1.7778;
         distCoeffLocal = cv::Mat::zeros(8, 1, CV_64F);
         rvecsLocal.clear();
         tvecsLocal.clear();
+        if(newCentersInImage.size() == 0){
+            std::cout<<"Centers can't be rectifies\n";
+            return rms_;
+        }
         rms_ = RunCalibrateCamera(newCentersInImage, imResolution, cameraMatrixLocal, distCoeffLocal, rvecsLocal, tvecsLocal, grid, spaceSize, false);
         //cv::solvePnP(newCentersInImage, )
         //logComm.append("\n"+std::to_string(i+1)+"rms> "+std::to_string(rms_));
@@ -996,12 +1084,13 @@ std::vector<cv::Point2f> RecomputeFrontoParallel(std::vector<cv::Point2f> center
             newCenters[w + h * grid.width] = cv::Point2f((xprom[w] + centersFronto[w + h * grid.width].x)/2.0f, (yprom[h] + centersFronto[w + h * grid.width].y)/2.0f);
         }
     }
+    /*
     for(int h = 0; h < grid.height; h++){
         for(int w = 0; w < grid.width; w++){
             newCenters[w + h * grid.width] = cv::Point2f((xprom[w] + centersFronto[w + h * grid.width].x)/2.0f, (yprom[h] + centersFronto[w + h * grid.width].y)/2.0f);
             std::cout << "("<<centersFronto[w + h * grid.width].x <<", "<<centersFronto[w + h * grid.width].y<<") --> ("<< newCenters[w + h * grid.width].x <<", "<< newCenters[w + h * grid.width].y<<")"<<std::endl;
         }
-    }
+    }*/
     return newCenters;
 }
 
